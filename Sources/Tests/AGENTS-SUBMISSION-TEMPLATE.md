@@ -126,6 +126,18 @@ Before submitting, verify your code uses modern patterns:
 
 **Citation:** AGENTS-AGNOSTIC.md, lines 45–73 (@Shared section)
 
+### TCA Patterns (if applicable)
+- [ ] Views use `@Bindable var store` (not `WithViewStore` or `@Perception.Bindable`)
+- [ ] State observation is direct property access (not `.onReceive()` or manual observation)
+- [ ] Optional state uses `.sheet(item:)` or `.navigationDestination(item:)` with `.scope()`
+- [ ] No host bridges or wrapper components for optional state
+- [ ] Child reducers composed with `.ifLet()` or enum Destination with `@Reducer` macro
+- [ ] No deprecated APIs: WithViewStore, IfLetStore, @Perception.Bindable
+- [ ] Bindings use `@Bindable` with ad hoc actions OR `BindableAction` + `BindingReducer` for many fields
+- [ ] State is marked with `@ObservableState` (not `@Published`)
+
+**Citation:** AGENTS-TCA-PATTERNS.md (entire document, 4 core patterns + anti-patterns)
+
 ### Testing
 - [ ] Tests use `@Test func` (not `func test...()`)
 - [ ] Tests use Swift Testing (not XCTest)
@@ -205,6 +217,7 @@ Paste this section in your submission message:
 - ✅ @Observable for state (no @Published)
 - ✅ Swift Testing (no XCTest)
 - ✅ @Bindable views (no @Perception.Bindable)
+- ✅ TCA patterns modern (no WithViewStore, IfLetStore)
 - ✅ No deprecated patterns found
 
 **Questions for reviewer:**
@@ -286,6 +299,9 @@ This shows you understand the framework, not just following orders.
 ❌ You used singletons instead of `@Dependency`
 ❌ You edited files outside your stated scope without asking
 ❌ Your submission doesn't cite any AGENTS.md sections
+❌ Your code uses deprecated TCA APIs: `WithViewStore`, `IfLetStore`, host bridges
+❌ Optional state navigation uses if-let rendering instead of `.sheet(item:)`
+❌ State observation uses `.onReceive()` or manual binding instead of `@Bindable`
 
 If any of these apply, fix the code and re-read the relevant sections before submitting.
 

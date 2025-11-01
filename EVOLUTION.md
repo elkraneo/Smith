@@ -81,6 +81,55 @@ This document tracks major changes, discoveries, and improvements to the Smith f
 
 ---
 
+### Discovery 3: Modern TCA 1.5+ Patterns (Avoiding Deprecated APIs) (Nov 1, 2025)
+
+**Problem:** When implementing medium-complexity TCA features, agents and developers fall back to deprecated patterns (WithViewStore, IfLetStore, @Perception.Bindable) when unsure about modern approaches. This leads to:
+- Cascading compilation errors that mask real issues
+- Solution-chasing without verification (trying API after API)
+- Building unnecessary host bridges and wrapper components
+- Features that don't work despite "correct" TCA syntax
+
+Example: A 1-hour session implementing a WatcherAssist popover feature resulted in 5+ different attempted fixes, deprecation warnings, visionOS incompatibilities, and a feature that still didn't appear—all because the correct modern pattern (direct `@Bindable` + `.sheet(item:)`) was unclear.
+
+**Solution:**
+- Created `AGENTS-TCA-PATTERNS.md` documenting canonical patterns for TCA 1.5+ (Swift Composable Architecture)
+- Four core patterns with full examples:
+  1. Observing state in views (@Bindable, direct property access)
+  2. Optional state navigation (.sheet(item:), .scope())
+  3. Multiple destinations (enum Destination, @Reducer macro)
+  4. Form bindings (BindableAction, BindingReducer)
+- Clear anti-patterns section showing what NOT to do and why
+- Platform-agnostic: all patterns work on iOS, macOS, iPadOS, visionOS, watchOS
+- Verification checklist for agents implementing TCA features
+
+**Key Insight:** Modern TCA requires zero bridges, zero hosts, and zero manual observation. If code is complex, the pattern is likely wrong.
+
+**Examples Given:**
+- ❌ WithViewStore (deprecated) → ✅ @Bindable + direct access
+- ❌ Host bridge for optional state → ✅ .sheet(item: $store.scope(...))
+- ❌ Manual .onReceive() observation → ✅ @Bindable automatic observation
+- ❌ If-let rendering of optional state → ✅ Navigation modifiers
+
+**Impact:** Prevents agents from:
+- Using deprecated APIs that trigger warnings
+- Building overly complex workarounds
+- Chasing compilation errors in wrong files
+- Spending hours on trial-and-error API changes
+
+**Testing:** Modern patterns are transparent to TestStore—no special utilities needed. Verification is simple: feature appears/disappears when optional state changes.
+
+**Citations:**
+- AGENTS-TCA-PATTERNS.md (entire document)
+- Updated AGENTS-SUBMISSION-TEMPLATE.md (TCA Patterns checklist added)
+- Discovery applied to GameEngine.watcherAssistPopover issue (GreenSpurt real-world validation)
+
+**Recommended Follow-Up:**
+- Monitor if this prevents cascading-error antipattern in future agent work
+- Track most-cited sections in AGENTS-TCA-PATTERNS.md
+- Update with visionOS-specific gotchas if discovered
+
+---
+
 ## Framework Areas Under Development
 
 ### Next: Error Handling Patterns
