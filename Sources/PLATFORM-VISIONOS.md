@@ -189,6 +189,48 @@ RealityView { content in
 }
 ```
 
+### PresentationComponent Entity Creation
+
+**[CRITICAL]** When using `PresentationComponent` for popovers or presentations, the entity must be created and added to the scene early, not lazily on demand.
+
+**Problem:** If you defer entity creation until presentation is needed, the entity may not exist in the scene when the view tries to render, resulting in invisible popovers despite correct state management.
+
+**Pattern:**
+```swift
+// ✅ CORRECT: Create presentation entity during button configuration
+private func configureButton(for button: Entity, in container: Entity) {
+  // ... button setup ...
+
+  // Create the PresentationComponent entity immediately
+  let popoverEntity = Entity()
+  popoverEntity.name = "button-popover"
+  var presentation = PresentationComponent(
+    configuration: .popover(arrowEdge: .bottom),
+    content: PopoverContentView()
+  )
+  presentation.isPresented = false  // Start hidden
+  popoverEntity.components.set(presentation)
+  container.addChild(popoverEntity)
+}
+
+// ✅ Later, toggle visibility via state observation
+.onChange(of: store.popoverVisibility) { _, isVisible in
+  // Update isPresented flag
+  if var presentation = popoverEntity.components[PresentationComponent.self] {
+    presentation.isPresented = isVisible
+    popoverEntity.components.set(presentation)
+  }
+}
+```
+
+**Why:** RealityKit requires the entity to be in the scene graph before its components can be rendered. If you create the entity lazily when presentation is needed, there's a synchronization gap where the view tries to render content for a non-existent entity.
+
+**Key Points:**
+- Create `PresentationComponent` entities during scene setup, not on-demand
+- Initialize with `isPresented = false`
+- Toggle `isPresented` via state observation (onChange handlers)
+- Keep the entity in the scene; don't add/remove it repeatedly
+
 ---
 
 ## ImmersiveSpace Lifecycle

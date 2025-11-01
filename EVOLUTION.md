@@ -130,6 +130,67 @@ Example: A 1-hour session implementing a WatcherAssist popover feature resulted 
 
 ---
 
+### Discovery 4: Popover Entity Creation Gap (Nov 1, 2025)
+
+**Problem:** WatcherAssist popover feature implemented with modern TCA 1.23.0+ patterns, reducer correctly setting state, but popover never appeared in visionOS. Reducer logic confirmed working: `state.watcherAssistPopover = WatcherAssistPopoverState(...)` was being set, GameView was observing state changes, but visual presentation remained invisible.
+
+**Root Cause:** The `PresentationComponent` entities for button popovers were never being created in the 3D scene. The code had a method `ensureScreenButtonPopover()` that creates the popover entity with a SwiftUI `ScreenButtonPopoverView` as its content, but this method was defined but never called. Result: even though SwiftUI view logic tried to render content, there was no entity in the scene to present it. The visionOS `PresentationComponent` was never instantiated.
+
+**Key Discovery:** Modern TCA patterns can correctly manage state and view logic, but if the underlying visionOS presentation infrastructure isn't wired correctly, the feature won't work. The gap wasn't in TCA—it was in the RealityKit integration layer.
+
+**Solution:**
+- Located `configureScreenButtonPopover()` method in [GameRenderer+Button3D.swift:178-205](../../GreenSpurt/Packages/TheGreenSpurt/Sources/GameEngine/GameRenderer+Button3D.swift#L178-L205)
+- Added call to `ensureScreenButtonPopover()` at end of configuration (lines 199-204)
+- This creates the PresentationComponent entity in the 3D scene when the button is configured, not lazily when popovers are shown
+- The entity is reused and its `isPresented` flag is toggled by `synchronizeScreenButtonPopovers()` when visibility state changes
+
+**Code Pattern:**
+```swift
+fileprivate func configureScreenButtonPopover(
+  for button: Entity,
+  offset: SIMD3<Float>,
+  buttonID: Button3DIdentifier,
+  screenID: Int,
+  container: Entity
+) {
+  // ... existing button component setup ...
+
+  // NEW: Create the PresentationComponent entity for this button's popover
+  ensureScreenButtonPopover(
+    for: buttonID,
+    screenID: screenID,
+    container: container,
+    offset: offset
+  )
+}
+```
+
+**Impact:** Resolves the WatcherAssist feature visibility issue. The popover should now appear when the hint button is tapped on a claimed screen in visionOS.
+
+**Testing Strategy:** With this fix in place, the following flow should work end-to-end:
+1. Player claims a screen in the game
+2. Hint button appears on screen (via `setupScreenButtons`)
+3. Player taps hint button
+4. `Button3DComponent.onPressed` dispatches `.screenButtonPopoverTapped` action
+5. Reducer sets `state.watcherAssistPopover = WatcherAssistPopoverState(...)`
+6. GameView observes state change, calls `renderer.applyScreenButtonPopoverVisibility(visibility)`
+7. `synchronizeScreenButtonPopovers()` sets `presentation.isPresented = true`
+8. visionOS renders the popover with `ScreenButtonPopoverView` content
+9. ScreenButtonPopoverView conditionally shows `WatcherAssistPopoverView` (if `store.watcherAssistPopover != nil`)
+
+**Related Files:**
+- [GameRenderer+Button3D.swift:178-280](../../GreenSpurt/Packages/TheGreenSpurt/Sources/GameEngine/GameRenderer+Button3D.swift#L178-L280) - Popover management
+- [GameView.swift:232-237](../../GreenSpurt/Packages/TheGreenSpurt/Sources/AppFeature/GameView.swift#L232-L237) - State observation
+- [GameEngine.swift:59-114](../../GreenSpurt/Packages/TheGreenSpurt/Sources/GameEngine/GameEngine.swift#L59-L114) - Reducer logic
+- [WatcherAssistPopoverView.swift](../../GreenSpurt/Packages/TheGreenSpurt/Sources/GameEngine/HintSystem/WatcherAssistPopoverView.swift) - Popover UI
+
+**Citations:**
+- GameRenderer+Button3D.swift lines 178-205 (configureScreenButtonPopover)
+- GameRenderer+Button3D.swift lines 207-244 (ensureScreenButtonPopover)
+- GameRenderer+Button3D.swift lines 265-280 (synchronizeScreenButtonPopovers)
+
+---
+
 ## Framework Areas Under Development
 
 ### Next: Error Handling Patterns
