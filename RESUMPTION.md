@@ -36,14 +36,22 @@ This file helps you resume work on Smith framework after moving to this location
 
 **Discovery 1 (Nov 1):** Tool Usage Optimization
 - Added SosumiDocs MCP, XcodeBuildMCP, gh CLI guidance
-- See EVOLUTION.md lines 36–51
+- See EVOLUTION.md for details
 
 **Discovery 2 (Nov 1):** @Shared Pattern for Cross-Feature State
 - Added @Shared/@SharedReader guidance for modular architectures
-- See EVOLUTION.md lines 55–80
-- AGENTS-AGNOSTIC.md lines 45–73
-- Submission template: lines 120–127
-- Evaluation checklist: lines 66–70, 91–92
+- Documented canonical patterns in AGENTS-AGNOSTIC.md
+
+**Discovery 3 (Nov 1):** Modern TCA 1.23.0+ Patterns
+- Created AGENTS-TCA-PATTERNS.md with 4 canonical patterns
+- Covers: @Bindable observation, optional state navigation, multiple destinations, form bindings
+- Prevents deprecated API usage (WithViewStore, IfLetStore, @Perception.Bindable)
+- Real-world validation via GreenSpurt WatcherAssist implementation
+
+**Discovery 4 (Nov 1):** Popover Entity Creation Gap (visionOS)
+- Identified RealityKit infrastructure dependency in visionOS UI
+- Added [CRITICAL] section to PLATFORM-VISIONOS.md
+- Case studies in CaseStudies/ directory document bug investigation
 
 ---
 
@@ -166,10 +174,11 @@ When starting a new Claude Code session at this location:
 ## Version Status
 
 - **v1.0:** Complete (Framework, 8 documents, 3 evaluation tools, 2 project wrappers)
-- **v1.1:** In planning (Error handling, networking, state sync)
+- **v1.1:** In progress (TCA Patterns added, visionOS patterns enhanced, 4 discoveries documented)
+- **v1.2:** Planned (Error handling, networking, state sync)
 - **v2.0:** Future (Automated validation, compliance scoring)
 
 ---
 
 ## Last Updated
-November 1, 2025 - Moved to /Volumes/Plutonian/_Developer/Smith and updated project links
+November 1, 2025 - Completed Discoveries 1-4, added AGENTS-TCA-PATTERNS.md, created CaseStudies directory
