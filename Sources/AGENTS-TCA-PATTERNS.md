@@ -1,10 +1,11 @@
-# TCA 1.5+ Modern Patterns for Agents
+# TCA 1.23.0+ Modern Patterns for Agents
 
 **Framework Version:** v1.1+
-**TCA Version:** 1.5.0 and later
+**TCA Version:** 1.23.0 and later (Swift Composable Architecture)
+**Swift Version:** 6.2+
 **Date Created:** November 1, 2025
 
-This document establishes the canonical patterns agents should use when working with TCA 1.5+ (Swift Composable Architecture). It replaces deprecated APIs and clarifies which patterns are correct across all Apple platforms, including visionOS.
+This document establishes the canonical patterns agents should use when working with TCA 1.23.0+ (Swift Composable Architecture). It replaces deprecated APIs and clarifies which patterns are correct across all Apple platforms, including visionOS.
 
 ---
 

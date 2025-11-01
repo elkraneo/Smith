@@ -81,7 +81,7 @@ This document tracks major changes, discoveries, and improvements to the Smith f
 
 ---
 
-### Discovery 3: Modern TCA 1.5+ Patterns (Avoiding Deprecated APIs) (Nov 1, 2025)
+### Discovery 3: Modern TCA 1.23.0+ Patterns (Avoiding Deprecated APIs) (Nov 1, 2025)
 
 **Problem:** When implementing medium-complexity TCA features, agents and developers fall back to deprecated patterns (WithViewStore, IfLetStore, @Perception.Bindable) when unsure about modern approaches. This leads to:
 - Cascading compilation errors that mask real issues
@@ -92,7 +92,7 @@ This document tracks major changes, discoveries, and improvements to the Smith f
 Example: A 1-hour session implementing a WatcherAssist popover feature resulted in 5+ different attempted fixes, deprecation warnings, visionOS incompatibilities, and a feature that still didn't appear—all because the correct modern pattern (direct `@Bindable` + `.sheet(item:)`) was unclear.
 
 **Solution:**
-- Created `AGENTS-TCA-PATTERNS.md` documenting canonical patterns for TCA 1.5+ (Swift Composable Architecture)
+- Created `AGENTS-TCA-PATTERNS.md` documenting canonical patterns for TCA 1.23.0+ (Swift Composable Architecture)
 - Four core patterns with full examples:
   1. Observing state in views (@Bindable, direct property access)
   2. Optional state navigation (.sheet(item:), .scope())
