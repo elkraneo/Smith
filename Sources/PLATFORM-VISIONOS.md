@@ -361,11 +361,42 @@ RealityView { content in
 
 ## Build Configuration (Critical)
 
-### XcodeBuildMCP (Mandatory)
+### Build Output Strategy for visionOS
 
-**Always use XcodeBuildMCP for visionOS projects:**
+**Recommended: Use xcsift for token-efficient output**
 
+```bash
+xcodebuild build \
+  -scheme MyApp \
+  -configuration Debug \
+  -derivedDataPath /Volumes/Plutonian/Xcode/DerivedData \
+  2>&1 | xcsift
 ```
+
+**Why:** Minimal JSON output (~150-300 tokens) with errors, line numbers, file paths.
+
+**Output:**
+```json
+{
+  "success": false,
+  "errors": [
+    {
+      "file": "GameView.swift",
+      "line": 42,
+      "column": 14,
+      "message": "Cannot convert value of type 'X' to expected argument type 'Y'"
+    }
+  ],
+  "errorCount": 1,
+  "warningCount": 0
+}
+```
+
+### When to Use XcodeBuildMCP
+
+Use `mcp__XcodeBuildMCP__*` tools when you need full build metadata:
+
+```swift
 mcp__XcodeBuildMCP__build_sim({
   projectPath: "/path/to/app.xcodeproj",
   scheme: "MyApp",
@@ -379,24 +410,25 @@ mcp__XcodeBuildMCP__test_sim({
 })
 ```
 
-**Benefits:**
-- Respects Xcode project settings
-- Proper simulator integration
-- Parses xcresult bundles
-- Better error reporting
+**When needed:**
+- Build product paths/binary locations
+- Code coverage information
+- Full build metadata
+- Device-specific deployment
 
-### Fallback: xcodebuild CLI
+**Trade-off:** Higher token cost (~800-1200 tokens) but complete information
 
-If XcodeBuildMCP is unavailable, use xcodebuild with external drive path:
+### CRITICAL: External Drive Path
+
+**Always include `-derivedDataPath /Volumes/Plutonian/Xcode/DerivedData`** when using xcodebuild or xcsift. visionOS builds are large and must go to external drive:
 
 ```bash
 xcodebuild build \
   -scheme MyApp \
   -configuration Debug \
-  -derivedDataPath /Volumes/Plutonian/Xcode/DerivedData
+  -derivedDataPath /Volumes/Plutonian/Xcode/DerivedData \
+  2>&1 | xcsift
 ```
-
-**CRITICAL:** Always include `-derivedDataPath /Volumes/Plutonian/Xcode/DerivedData`. visionOS builds are large and must go to external drive.
 
 ---
 

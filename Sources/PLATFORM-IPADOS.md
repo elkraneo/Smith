@@ -200,13 +200,19 @@ Scroll/
 
 ## Build Configuration
 
-- Use XcodeBuildMCP for builds
+**Recommended: Use xcsift for token-efficient output**
+```bash
+xcodebuild build -scheme MyApp -destination 'platform=iPadOS Simulator,name=iPad Pro (12.9-inch)' 2>&1 | xcsift
+```
+
+**When you need more metadata: Use XcodeBuildMCP**
+- Device-specific deployment
+- Build product paths
+- Simulator management
+
+**Testing Requirements:**
 - Test on multiple iPad models: iPad Pro 11", iPad Air, iPad mini, iPad (standard)
 - Test in both orientations and split view
-
-```bash
-xcodebuild build -scheme Scroll -destination 'platform=iPadOS Simulator,name=iPad Pro (12.9-inch)'
-```
 
 ---
 

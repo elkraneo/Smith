@@ -115,13 +115,20 @@ Scroll/
 
 ## Build Configuration
 
-- Use XcodeBuildMCP for builds
-- No special derived data paths needed
+**Recommended: Use xcsift for token-efficient output**
+```bash
+xcodebuild build -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 | xcsift
+```
+
+**When you need more metadata: Use XcodeBuildMCP**
+- Device-specific deployment
+- Build product paths
+- Simulator management
+
+**Notes:**
+- No special derived data paths needed (uses standard Xcode location)
 - Standard Debug/Release configurations
 - Support both iPhone and iPad (iPad has specific layout needs—see PLATFORM-IPADOS.md)
-
-```bash
-xcodebuild build -scheme Scroll -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
 ---

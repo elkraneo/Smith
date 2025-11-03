@@ -104,7 +104,17 @@ Scroll/
 
 ## Build Configuration
 
-- Use XcodeBuildMCP for builds
+**Recommended: Use xcsift for token-efficient output**
+```bash
+xcodebuild build -scheme MyApp 2>&1 | xcsift
+```
+
+**When you need more metadata: Use XcodeBuildMCP**
+- Build product paths
+- Architecture-specific builds (arm64 vs x86_64)
+- Code signing details
+
+**Notes:**
 - No special derived data paths needed (unlike visionOS)
 - Standard Debug/Release configurations
 

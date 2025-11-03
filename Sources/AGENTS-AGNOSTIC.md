@@ -107,10 +107,26 @@ This document uses three enforcement levels:
 - **[GUIDANCE] Use `curl` only for testing APIs directly** - Rarely needed in normal workflow
 
 **Building & Testing:**
-- **[CRITICAL] Use `XcodeBuildMCP` for all build operations** instead of raw `xcodebuild`
-  - Why: Parses xcresult bundles, structured errors, better device/simulator integration
+- **[STANDARD] Use `xcsift` for token-efficient build output** (recommended for most workflows)
+  ```bash
+  xcodebuild [build|test] [args] 2>&1 | xcsift
+  ```
+  - Why: Produces minimal JSON output (~150-300 tokens) with just errors, file paths, line numbers
+  - When: Daily development, iterating on builds, token-constrained contexts
+  - Output: `{ "success": bool, "errors": [...], "errorCount": N, "warningCount": N }`
+  - Reference: https://github.com/ldomaradzki/xcsift
+
+- **[STANDARD] Use `XcodeBuildMCP` when xcsift isn't sufficient** for structured access to build metadata
+  - Why: Parses xcresult bundles, provides full build product details, better device/simulator integration
+  - When: Need build product paths, binary info, code coverage, full build metadata
   - Tools: `build_sim`, `test_sim`, `build_device`, `test_device`, `build_macos`, `test_macos`, etc.
-  - Not: Running `xcodebuild` directly (loses structured error parsing)
+  - Output: Structured objects with expanded metadata
+  - Trade-off: Higher token cost (~800-1200 tokens) but more complete information
+
+- **[GUIDANCE] Use raw `xcodebuild` only when neither tool works** (rare edge cases)
+  - Output: Verbose, unstructured text mixed with compilation logs
+  - Token cost: Very high (5000+ tokens)
+  - Only use if debugging complex build system issues or tool failures
 
 **Repository Operations:**
 - **[STANDARD] Use `gh` CLI for simple repository tasks** - Faster and more direct
@@ -715,11 +731,22 @@ public struct AppFeature: Sendable {
 
 **Always prefer MCP tools over raw shell commands when available.**
 
-### XcodeBuildMCP - Building & Testing
+### Build Output: xcsift vs XcodeBuildMCP
 
-- **ALWAYS use** `mcp__XcodeBuildMCP__*` tools instead of raw `xcodebuild`
-- **Benefits:** Parses xcresult bundles, structured errors, better filtering, device/simulator integration
+**Use xcsift as primary (token-efficient):**
+```bash
+xcodebuild build -scheme MyScheme 2>&1 | xcsift
+# Output: { "success": true/false, "errors": [...], "errorCount": 0, "warningCount": 0 }
+# Token cost: ~150-300 tokens
+```
+- **Best for:** Daily development, most builds, token-constrained contexts
+- **Reference:** https://github.com/ldomaradzki/xcsift
+
+**Use XcodeBuildMCP when xcsift isn't sufficient:**
+- **When:** Need build product paths, binary locations, code coverage, full metadata
 - **Available:** `build_macos`, `build_sim`, `test_macos`, `test_sim`, `test_device`, `list_schemes`, `show_build_settings`, etc.
+- **Benefits:** Structured objects, device/simulator integration, full build info
+- **Token cost:** ~800-1200 tokens (higher but complete)
 
 ### SosumiDocs - Apple Documentation
 
