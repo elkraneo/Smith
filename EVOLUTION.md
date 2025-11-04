@@ -152,6 +152,47 @@ Example: A 1-hour session implementing a WatcherAssist popover feature resulted 
 
 ---
 
+### Discovery 5: Access Control Cascade Failure (Nov 4, 2025)
+
+**Problem:** Compilation error `Cannot convert value of type 'Binding<Article.ID??>' to expected argument type 'Binding<Article.ID?>'` masked the real issue: cascading access control violations when implementing TCA 1.x binding patterns with `@Bindable`.
+
+**Root Cause:** When exposing a public property for binding projection (`$store.articleSelection`), all transitive type dependencies must also be public:
+```
+articleSelection: Article.ID?
+  ↓ depends on
+ArticleSidebarDestination (was internal → must be public)
+  ↓ depends on
+ArticleLibraryCategory (was internal → must be public)
+  ↓ all protocol conformances must be public
+Hashable.hash(into:), Equatable.==
+```
+
+The compiler reported the symptom (optional type mismatch) instead of the root cause (access control), making debugging difficult.
+
+**Solution:**
+- Added comprehensive "Access Control & Public API Boundaries" section to AGENTS-AGNOSTIC.md (lines 443–598)
+- Includes checklist for verifying transitive access control before exposing any type
+- Shows how to debug access control errors (they masquerade as type errors)
+- Explains anti-patterns (exposing too much) and correct boundaries (protocols vs concrete types)
+- Added specific guidelines for when public exposure is appropriate
+- Updated AGENTS-SUBMISSION-TEMPLATE.md with 5-item "Access Control & Public API Boundaries" checklist
+- Created detailed case study: `CaseStudies/DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md`
+
+**Key Pattern Added:**
+- [STANDARD] Verify transitive access control before exposing any type or property
+- When using `@Bindable` with TCA 1.x, assume all bound properties need public types
+- Trace the full dependency chain, not just the immediate type
+
+**Example Lesson:**
+When you see type mismatch or binding errors, check access levels first. The compiler's error message often hides access control issues by reporting downstream type errors instead.
+
+**Citations:**
+- AGENTS-AGNOSTIC.md lines 443–598 (Access Control & Public API Boundaries section)
+- AGENTS-SUBMISSION-TEMPLATE.md lines 181–189 (Access Control checklist)
+- CaseStudies/DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md (detailed case study)
+
+---
+
 ## Framework Areas Under Development
 
 ### Next: Error Handling Patterns

@@ -178,6 +178,16 @@ Before submitting, verify your code uses modern patterns:
 
 **Citation:** AGENTS-AGNOSTIC.md, lines 1262–1284 (Latest Swift & Frameworks)
 
+### Access Control & Public API Boundaries
+- [ ] Verified transitive access control (all types in dependency chain are public when exposing properties)
+- [ ] Used checklist before making anything public (checked property, base type, transitive types, module boundaries)
+- [ ] No unnecessary public exposure (only exposed what's required for the feature)
+- [ ] Used protocol boundaries instead of concrete types where possible
+- [ ] Documented why types are public (in comments if not obvious)
+
+**Citation:** AGENTS-AGNOSTIC.md, lines 443–598 (Access Control & Public API Boundaries section)
+**Reference Case Study:** [DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md](../../CaseStudies/DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md)
+
 ### Platform-Specific (if applicable)
 - [ ] visionOS code uses `RealityView` (not `ARView`)
 - [ ] Code uses `#if os(visionOS)` guards where needed

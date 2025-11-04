@@ -124,6 +124,73 @@ How all pieces work together:
 
 ---
 
+## Submission & Framework Improvement
+
+### Code & Feature Submission
+**[Sources/Tests/AGENTS-SUBMISSION-TEMPLATE.md](./Tests/AGENTS-SUBMISSION-TEMPLATE.md)**
+
+Use this when submitting code changes or new features for review:
+- Task scope (Safe/Approval/Forbidden zones)
+- Architecture decisions (citing decision trees)
+- Framework compliance verification
+- Code pattern checklist
+- Access control verification
+
+**Also use for code review:**
+- [AGENTS-EVALUATION-CHECKLIST.md](./Tests/AGENTS-EVALUATION-CHECKLIST.md) - Reviewer verification checklist
+
+---
+
+### Discovery & Pattern Submission
+**[Sources/Tests/DISCOVERY-SUBMISSION-TEMPLATE.md](./Tests/DISCOVERY-SUBMISSION-TEMPLATE.md)**
+
+Use this when you discover a new pattern, anti-pattern, or critical gap that should be documented:
+- Problem description (error, behavior, context)
+- Root cause analysis (why it wasn't obvious)
+- Solution with code example
+- Framework integration plan (where should this live)
+- Enforcement level ([CRITICAL]/[STANDARD]/[GUIDANCE])
+
+**Reviewer uses:**
+- [DISCOVERY-EVALUATION-CHECKLIST.md](./Tests/DISCOVERY-EVALUATION-CHECKLIST.md) - Assess if discovery is systemic and worthy of framework integration
+
+**Process:**
+1. Submit using DISCOVERY-SUBMISSION-TEMPLATE.md
+2. Get verdict: ACCEPT / PARTIAL / REQUEST CHANGES / DECLINE
+3. If accepted, create case study in CaseStudies/ directory
+4. Framework docs updated by reviewer
+5. Discovery recorded in EVOLUTION.md
+
+---
+
+### Case Studies (Real-World Evidence)
+**[CaseStudies/](../../CaseStudies/)**
+
+Detailed investigations of real bugs and lessons learned:
+- What went wrong and why
+- Investigation process (debugging trail)
+- Solution and prevention strategy
+- Framework impact (what was added to Smith)
+
+**Current discoveries:**
+- DISCOVERY-4: Popover Entity Creation Gap (visionOS)
+- DISCOVERY-5: Access Control Cascade Failure (TCA 1.x)
+
+**To contribute:** See [CaseStudies/README.md](../../CaseStudies/README.md) for step-by-step process.
+
+---
+
+### Framework Evolution Log
+**[EVOLUTION.md](../../EVOLUTION.md)**
+
+Master log of all framework improvements:
+- Each discovery recorded with impact
+- Framework sections updated (with line numbers)
+- Systemic patterns identified
+- Prevention strategies documented
+
+---
+
 ## Quick Reference: When to Read What
 
 | I want to... | Read this |

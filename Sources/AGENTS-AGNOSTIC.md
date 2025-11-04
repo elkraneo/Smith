@@ -440,6 +440,164 @@ let id = UUID()
 
 ---
 
+## Access Control & Public API Boundaries
+
+### [STANDARD] Verify Transitive Access Control Before Exposing Types
+
+When you make a property or type public, **all transitive type dependencies must also be public**. The Swift compiler validates this at declaration time and may report misleading error messages about type mismatches when the real issue is access control.
+
+**Why this matters:**
+- Exposing one public property can force an entire chain of types to become public
+- Compiler errors often report symptoms (type mismatch) instead of root causes (access control)
+- Missing transitive declarations cause cascade failures in binding patterns and module boundaries
+
+**Reference:** Case Study [DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md](../../CaseStudies/DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md)
+
+### Checklist: Before Making Anything Public
+
+```
+- [ ] Is the property itself public (or do you need to make it public)?
+- [ ] Is the property's base type public?
+  - [ ] Check: enum or struct that holds the property
+  - [ ] Check: any generic type parameters
+
+- [ ] Do all transitive types need to be public?
+  - [ ] Direct type (the main enum/struct)
+  - [ ] Types nested within that type
+  - [ ] Protocol conformances (Hashable.hash, Equatable.==)
+
+- [ ] Does this violate module boundaries?
+  - [ ] Is the type now visible outside its intended scope?
+  - [ ] Does a higher-level module now depend on lower-level internals?
+  - [ ] Could this create a circular dependency?
+
+- [ ] Is there a better alternative?
+  - [ ] Could you use a protocol instead of concrete type?
+  - [ ] Could you move the type to a shared module?
+  - [ ] Could you use a wrapper type at the boundary?
+```
+
+### Example: The Cascade
+
+```swift
+// You want to expose this binding in your app layer:
+@Bindable var store = Store(initialState: ScrollState())
+
+windowGroup("Reader") {
+  ReaderView(store: $store.articleSelection)
+  // ERROR: Cannot convert Binding<Article.ID??> to Binding<Article.ID?>
+}
+
+// Root cause: articleSelection is internal, so it's not accessible
+// Even after making articleSelection public, you discover:
+
+public var articleSelection: Article.ID?
+// ↓ depends on (must be public)
+ArticleSidebarDestination?
+// ↓ depends on (must be public)
+ArticleLibraryCategory
+// ↓ all properties and conformances must be public
+Hashable.hash(into:)
+Equatable.==
+
+// Solution: Trace the entire chain before exposing anything
+public enum ArticleLibraryCategory: Hashable, Equatable {
+  case all
+  case favorites
+  // ... with public conformance methods
+
+  public func hash(into hasher: inout Hasher) { /* ... */ }
+  public static func == (lhs: Self, rhs: Self) -> Bool { /* ... */ }
+}
+
+public enum ArticleSidebarDestination: Hashable, Equatable {
+  case detail(Article.ID)
+  // ... with public conformance methods
+}
+
+// Now the binding works
+$store.articleSelection  // ✅ Fully public type signature
+```
+
+### How to Debug Access Control Errors
+
+1. **Don't trust the error message.** If you see type mismatch or binding errors, check access levels first.
+
+2. **Trace the full chain:**
+   - Not just the immediate property, but every type it depends on
+   - Use `grep` to find all dependencies of each type
+   - Verify each one has a `public` access level if needed
+
+3. **Use Xcode's Quick Help:**
+   - Option-click on a type in Xcode
+   - See the access level in the generated interface
+   - If "internal" is shown, you found a violation
+
+4. **When adding `@Bindable` to state:**
+   - Assume all bound properties need public types
+   - Check the state struct's access level
+   - Verify all properties involved in binding are public
+
+### Anti-Pattern: Exposing Too Much
+
+❌ **Don't expose implementation details just to avoid warnings:**
+
+```swift
+// Wrong: You made ArticleLibraryCategory public unnecessarily
+public enum ArticleLibraryCategory { ... }  // Now it's part of the public API
+
+// Clients now depend on this internal type, making future refactors hard
+let category = Feature.ArticleLibraryCategory.all  // Tight coupling
+```
+
+✅ **Better: Use a protocol boundary if possible**
+
+```swift
+// If you only need certain methods public, use a protocol
+public protocol ArticleCategory {
+  var displayName: String { get }
+}
+
+// Keep the concrete type internal
+internal enum ArticleLibraryCategory: ArticleCategory {
+  // ...
+}
+
+// Public interface uses protocol, not concrete type
+public func setCategory(_ category: some ArticleCategory) { }
+```
+
+### When Public Exposure Is Correct
+
+Make types public when:
+
+1. **They're part of the public feature API** - State destinations, value objects that features expose
+   ```swift
+   // ArticleQueueFeature exposes this as part of its public state interface
+   public enum ArticleSidebarDestination: Hashable {
+     case detail(Article.ID)
+     case settings
+   }
+   ```
+
+2. **They're required by binding patterns** - Properties that views need to bind to
+   ```swift
+   @ObservableState
+   public struct State {
+     public var articleSelection: Article.ID?  // Needs to be public for $store.articleSelection
+   }
+   ```
+
+3. **They're cross-module value objects** - DTOs or domain values passed between modules
+   ```swift
+   public struct Article: Identifiable, Hashable {
+     public let id: ID
+     public let title: String
+   }
+   ```
+
+---
+
 ## Swift Testing Framework (Required)
 
 ### Basic Structure
