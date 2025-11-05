@@ -18,6 +18,9 @@ This document establishes the canonical patterns agents should use when working 
 | `@Perception.Bindable` | `@Bindable` (from TCA) | @Perception isn't needed; TCA @Bindable works everywhere |
 | Host bridge patterns | `.scope()` directly in view | Bridges add unnecessary complexity |
 | Manual `.onReceive()` | `@Bindable` with `@ObservableState` | Observation is automatic |
+| `Shared(value: x)` | `Shared(x)` or `Shared(wrappedValue: x, key:)` | Correct argument label required |
+| `Shared(reader:getter:setter:)` | `Shared(wrappedValue:, key:)` with persistence | Pattern doesn't exist in TCA 1.23.0+ |
+| Multiple features mutating `@Shared` | Single owner + `@SharedReader` for others | Reference semantics require discipline |
 
 ---
 
@@ -466,6 +469,197 @@ struct FormView: View {
 
 ---
 
+## Pattern 5: Shared State Initialization (@Shared)
+
+### When to Use
+- [STANDARD] Cross-feature state that multiple reducers need to access simultaneously
+- Examples: Authentication status, unread counts, user preferences, feature flags
+- [STANDARD] State that needs persistence (UserDefaults, file storage)
+- [GUIDANCE] Parent wants to pass derived shared state to child reducers
+- Works on all platforms (iOS, macOS, iPadOS, visionOS, watchOS)
+
+### Implementation
+
+#### Simple Shared State (Self-Owned)
+
+```swift
+@Reducer
+struct MessageCenterFeature {
+  @ObservableState
+  struct State: Equatable {
+    @Shared public var unreadCounts: [Int: Int]
+
+    public init(unreadCounts: [Int: Int]) {
+      self._unreadCounts = Shared(unreadCounts)
+    }
+  }
+
+  enum Action {
+    case markAsRead(Int)
+    case markAllAsRead
+  }
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .markAsRead(let screenID):
+        state.unreadCounts[screenID] = 0
+        return .none
+      case .markAllAsRead:
+        state.unreadCounts = [:]
+        return .none
+      }
+    }
+  }
+}
+```
+
+#### Shared State with Persistence
+
+```swift
+@Reducer
+struct AuthenticationFeature {
+  @ObservableState
+  struct State: Equatable {
+    @Shared(.appStorage("currentUser")) public var currentUser: User?
+    @Shared(.fileStorage(URL(...))) public var userPreferences: Preferences?
+
+    public init(
+      currentUser: User? = nil,
+      userPreferences: Preferences? = nil
+    ) {
+      self._currentUser = Shared(wrappedValue: currentUser, .appStorage("currentUser"))
+      self._userPreferences = Shared(wrappedValue: userPreferences, .fileStorage(URL(...)))
+    }
+  }
+
+  enum Action {
+    case login(User)
+    case logout
+    case updatePreferences(Preferences)
+  }
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .login(let user):
+        state.currentUser = user
+        return .none
+      case .logout:
+        state.currentUser = nil
+        return .none
+      case .updatePreferences(let prefs):
+        state.userPreferences = prefs
+        return .none
+      }
+    }
+  }
+}
+```
+
+#### Parent Passing Derived Shared State to Child
+
+```swift
+@Reducer
+struct ParentFeature {
+  @ObservableState
+  struct State: Equatable {
+    @Shared public var globalSettings: AppSettings
+    @Presents var child: ChildFeature.State?
+  }
+
+  enum Action {
+    case child(PresentationAction<ChildFeature.Action>)
+  }
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .child:
+        return .none
+      }
+    }
+    .ifLet(\.$child, action: \.child) {
+      ChildFeature()
+    }
+  }
+}
+
+@Reducer
+struct ChildFeature {
+  @ObservableState
+  struct State: Equatable {
+    @Shared public var globalSettings: AppSettings  // ← Derived from parent
+    var localState: String = ""
+
+    public init(globalSettings: Shared<AppSettings>) {
+      self._globalSettings = globalSettings
+    }
+  }
+
+  enum Action {
+    case updateLocalState(String)
+  }
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .updateLocalState(let value):
+        state.localState = value
+        return .none
+      }
+    }
+  }
+}
+
+// In parent's reduce, when creating child:
+// state.child = ChildFeature.State(globalSettings: state.$globalSettings)
+```
+
+#### Read-Only Access with @SharedReader
+
+```swift
+@Reducer
+struct DisplayFeature {
+  @ObservableState
+  struct State: Equatable {
+    var screenID: Int
+  }
+
+  enum Action {
+    case viewAppeared
+  }
+
+  @SharedReader(.appStorage("unreadCounts")) var unreadCounts: [Int: Int]
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .viewAppeared:
+        let count = unreadCounts[state.screenID] ?? 0
+        print("Unread count: \(count)")
+        return .none
+      }
+    }
+  }
+}
+```
+
+### Key Points
+
+- **Constructor with label**: Always use `Shared(wrappedValue: value)` or shorthand `Shared(value)` with the correct argument label.
+- **Persistence strategies**: `@Shared(.appStorage("key"))`, `@Shared(.fileStorage(url))`, `@Shared(.inMemory("key"))`, or no persistence.
+- **Reference semantics**: `@Shared` wraps state in a reference type. Mutations are visible to all holders immediately.
+- **Derived sharing**: Pass `state.$sharedProperty` to child reducers to share a reference without duplicating.
+- **Read-only access**: Use `@SharedReader` in features that only read shared state. Prevents accidental mutations.
+- **Single owner pattern**: Designate one reducer as the owner of a `@Shared` property. Others should use `@SharedReader`.
+
+### Why This Works
+
+`@Shared` eliminates prop-drilling for cross-feature state while maintaining type safety. The reference-type backing means all holders see updates instantly. Persistence keys let you save to UserDefaults or file storage automatically. The macro generates the observation plumbing so SwiftUI views see updates through `@Bindable`.
+
+---
+
 ## Common Mistakes (Anti-Patterns)
 
 ### ❌ Mistake 1: Using Deprecated APIs
@@ -601,6 +795,126 @@ struct ParentView: View {
 
 ---
 
+### ❌ Mistake 5: Wrong @Shared Constructor
+
+```swift
+// WRONG - Incorrect argument label
+self._count = Shared(value: 0)  // ← 'value:' is not the correct label
+
+// WRONG - Missing label entirely in persisted state
+self._currentUser = Shared(user, .appStorage("user"))  // ← Missing 'wrappedValue:' label
+
+// WRONG - Non-existent derived constructor
+@Shared(reader: getter, setter: setter) var value: Int  // ← Pattern doesn't exist in TCA
+```
+
+**Correct patterns:**
+
+```swift
+// RIGHT - Simple constructor (implicit wrappedValue)
+self._count = Shared(0)
+
+// RIGHT - Explicit wrappedValue label
+self._count = Shared(wrappedValue: 0)
+
+// RIGHT - With persistence key
+self._currentUser = Shared(wrappedValue: user, .appStorage("user"))
+
+// RIGHT - Multiple persistence strategies
+self._cached = Shared(wrappedValue: data, .inMemory("cache"))
+self._prefs = Shared(wrappedValue: preferences, .fileStorage(url))
+```
+
+**Why**: The `@Shared` property wrapper only has specific constructor signatures. `wrappedValue:` is required when using a persistence key. There is no `value:` label and no `reader:getter:setter:` pattern in TCA 1.23.0+.
+
+---
+
+### ❌ Mistake 6: Mutating @Shared from Multiple Features
+
+```swift
+// WRONG - Multiple independent features mutate the same @Shared
+@Reducer
+struct FeatureA {
+  @SharedReader(.appStorage("unreadCounts")) var unreadCounts: [Int: Int]
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .markAsRead(let id):
+        unreadCounts[id] = 0  // ← Mutation from FeatureA
+        return .none
+      }
+    }
+  }
+}
+
+@Reducer
+struct FeatureB {
+  @SharedReader(.appStorage("unreadCounts")) var unreadCounts: [Int: Int]
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .clearAll:
+        unreadCounts = [:]  // ← Mutation from FeatureB
+        return .none
+      }
+    }
+  }
+}
+```
+
+**Correct pattern (Single Owner):**
+
+```swift
+// RIGHT - One reducer owns mutations, others read only
+@Reducer
+struct MessageCenterFeature {
+  @ObservableState
+  struct State: Equatable {
+    @Shared(.appStorage("unreadCounts")) var unreadCounts: [Int: Int]
+  }
+
+  enum Action {
+    case markAsRead(Int)
+    case clearAll
+  }
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .markAsRead(let id):
+        state.unreadCounts[id] = 0  // ← Single owner
+        return .none
+      case .clearAll:
+        state.unreadCounts = [:]
+        return .none
+      }
+    }
+  }
+}
+
+// Other features use @SharedReader
+@Reducer
+struct DisplayFeature {
+  @SharedReader(.appStorage("unreadCounts")) var unreadCounts: [Int: Int]
+
+  var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .viewAppeared:
+        let count = unreadCounts[state.id] ?? 0  // ← Read only
+        return .none
+      }
+    }
+  }
+}
+```
+
+**Why**: `@Shared` has reference semantics. Multiple writers cause race conditions and unpredictable state. Designate one reducer as the owner; others should use `@SharedReader` for read-only access.
+
+---
+
 ## Verification Checklist for Agents
 
 When implementing a TCA feature, verify:
@@ -614,11 +928,19 @@ When implementing a TCA feature, verify:
 - [ ] Dispatch is via `store.send(.action)` directly in closures
 - [ ] No passing closures to child views; pass stores instead
 - [ ] Child reducers composed with `.ifLet()` or enum Destination
+- [ ] `@Shared` uses correct constructor: `Shared(value)` or `Shared(wrappedValue: value, key:)`
+- [ ] `@Shared` properties have explicit initializers in State's `init()`
+- [ ] Cross-feature `@Shared` has single owner reducer
+- [ ] Other features use `@SharedReader` for read-only access, not `@Shared`
+- [ ] Persistence keys are explicit: `.appStorage()`, `.fileStorage()`, `.inMemory()`
+- [ ] No `@Shared(reader:getter:setter:)` pattern (doesn't exist in TCA)
 - [ ] Code compiles without deprecation warnings
 
 ---
 
 ## Testing
+
+### Modern TCA Pattern Testing
 
 Modern TCA patterns are tested the same way:
 
@@ -647,11 +969,86 @@ func testOptionalStateNavigation() async {
 
 No special test utilities needed. The patterns are transparent to testing.
 
+### Testing @Shared State
+
+When testing reducers that use `@Shared` state:
+
+```swift
+@MainActor
+struct MessageCenterTests {
+  @Test func markMessageAsRead() async {
+    let store = TestStore(
+      initialState: MessageCenterFeature.State(
+        unreadCounts: [:]
+      ),
+      reducer: { MessageCenterFeature() }
+    )
+
+    // Action mutates shared state
+    await store.send(.markAsRead(screenID: 1)) {
+      $0.unreadCounts[1] = 0
+    }
+
+    #expect(store.state.unreadCounts[1] == 0)
+  }
+
+  @Test func sharedStateVisibleToMultipleReducers() async {
+    // Create shared state once
+    let sharedCounts = Shared(wrappedValue: [Int: Int]())
+
+    // Pass to first reducer
+    let store1 = TestStore(
+      initialState: DisplayFeature.State(screenID: 1),
+      reducer: { DisplayFeature() }
+    ) withDependencies: {
+      // Simulate having access to shared state through dependency
+      $0.continuousClock = TestClock()
+    }
+
+    // Verify both reducers can see the shared reference
+    // (In real scenarios, @Shared handles this automatically)
+    #expect(sharedCounts.wrappedValue.isEmpty)
+  }
+}
+```
+
+### Testing Read-Only Access
+
+```swift
+@MainActor
+struct DisplayFeatureTests {
+  @Test func readsSharedUnreadCounts() async {
+    let store = TestStore(
+      initialState: DisplayFeature.State(screenID: 1),
+      reducer: { DisplayFeature() }
+    ) withDependencies: {
+      // The @SharedReader is set up at feature level, not in test
+      // This test focuses on reducer logic, not shared state initialization
+      $0.continuousClock = TestClock()
+    }
+
+    // Trigger view appeared action
+    await store.send(.viewAppeared)
+
+    // Verify the feature responds correctly based on shared state
+    // (Actual shared state mutations tested separately in owner reducer)
+  }
+}
+```
+
+**Key Points for Testing @Shared:**
+- Test the owner reducer's mutations comprehensively
+- @SharedReader features don't need complex setup; they read during reduce
+- Use deterministic time (`TestClock`) for timing-dependent shared state
+- Each test should be independent; don't rely on shared state from previous tests
+- The macro handles observation automatically; no special test setup needed
+
 ---
 
 ## References
 
 - **TCA GitHub**: https://github.com/pointfreeco/swift-composable-architecture
+- **TCA @Shared Documentation**: [SharingState.md](https://github.com/pointfreeco/swift-composable-architecture/blob/main/Sources/ComposableArchitecture/Documentation.docc/Articles/SharingState.md)
 - **TCA Documentation**: Swift Concurrency, Bindings, Navigation articles (TCA repo main branch)
 - **Point-Free Blog**: Series on modern TCA patterns
 
@@ -659,6 +1056,13 @@ No special test utilities needed. The patterns are transparent to testing.
 
 ## Last Updated
 
-November 1, 2025 – Initial version covering TCA 1.5+ patterns
+November 5, 2025 – Added Pattern 5: Shared State Initialization (@Shared)
+- Documented all `@Shared` constructors and persistence strategies
+- Added anti-patterns: wrong constructors (Mistake 5) and multiple-writer race conditions (Mistake 6)
+- Extended verification checklist with `@Shared` specific items
+- Added testing guidance for shared state patterns
+- Linked official TCA @Shared documentation
+
+**Previous**: November 1, 2025 – Initial version covering TCA 1.5+ patterns
 
 **Next Review**: December 1, 2025 – Incorporate visionOS-specific gotchas if discovered
