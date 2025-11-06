@@ -272,6 +272,10 @@ struct InventoryFeature {
     case deleteConfirmation(ConfirmationDialogFeature)
   }
 
+  // ⚠️ CRITICAL: The closure form is MANDATORY for @Reducer enums.
+  // Always write: .ifLet(\.$destination, action: \.destination) { Destination() }
+  // Never write: .ifLet(\.$destination, action: \.destination)  // ❌ Breaks with _EphemeralState error
+
   var body: some ReducerOf<Self> {
     Reduce { state, action in
       switch action {
@@ -336,6 +340,7 @@ struct InventoryView: View {
 
 - **Single optional `destination`**: Only one child can be active at a time. Type-safe.
 - **`@Reducer(state: .equatable) enum Destination`**: Reducer composition for multiple feature types.
+- **⚠️ CRITICAL: `.ifLet()` with closure is MANDATORY**: Always write `.ifLet(\.$destination, action: \.destination) { Destination() }` - without the closure you get `_EphemeralState` errors and broken state flow.
 - **Scope by case**: `\.destination?.editItem` targets only the edit case; if destination is `addItem`, the scope is nil.
 - **Multiple view modifiers**: Each presentation type (`.sheet()`, `.navigationDestination()`, etc.) scopes to its specific case.
 
