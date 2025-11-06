@@ -4,7 +4,7 @@ This directory contains project-specific bug investigations, post-mortems, and l
 
 ## Current Case Studies
 
-### Case Study 1: GreenSpurt WatcherAssist Popover Entity Gap
+### Case Study 1: RealityKit Popover Entity Infrastructure Gap
 **Date:** November 1, 2025
 **Scope:** visionOS RealityKit + TCA integration
 **Outcome:** Discovered implicit infrastructure dependency in popover implementation
@@ -139,7 +139,7 @@ If case study reveals a missing pattern or [CRITICAL] issue:
 
 | Case Study | Framework Impact | Relevant File |
 |-----------|------------------|----------------|
-| GreenSpurt Popover Entity Gap | PresentationComponent pattern added to visionOS | PLATFORM-VISIONOS.md |
+| RealityKit Popover Entity Infrastructure | PresentationComponent pattern added to visionOS | PLATFORM-VISIONOS.md |
 
 ---
 

@@ -1,7 +1,7 @@
 # DISCOVERY-6: The .ifLet Closure Requirement - _EphemeralState and @Reducer Enums
 
 **Date:** November 6, 2025
-**Discovery Context:** GreenSpurt compilation/runtime errors after recent reducer changes
+**Discovery Context:** Compilation/runtime errors in a game app after recent reducer changes
 **Impact Level:** CRITICAL - Breaks enum-based navigation in TCA, causes empty state
 **Framework Documents Affected:** AGENTS-TCA-PATTERNS.md (Pattern 3 section)
 
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-When using `@Reducer` enum cases for navigation (e.g., `.intro(IntroLevel)`, `.mpa(MPALevel)`), removing the closure from `.ifLet()` breaks the app. The error `_EphemeralState requirement` is a red herring—the real issue is **the closure form is mandatory for @Reducer enums**.
+When using `@Reducer` enum cases for navigation (e.g., `.firstScreen(Screen1)`, `.secondScreen(Screen2)`), removing the closure from `.ifLet()` breaks the app. The error `_EphemeralState requirement` is a red herring—the real issue is **the closure form is mandatory for @Reducer enums**.
 
 **The Fix:** Always use the closure form:
 ```swift
@@ -27,30 +27,30 @@ When using `@Reducer` enum cases for navigation (e.g., `.intro(IntroLevel)`, `.m
 
 ### The Symptom
 
-A recent change to `AppFeature.swift` removed the closure from `.ifLet`, resulting in:
+A recent change removed the closure from `.ifLet` in an app's main reducer, resulting in:
 
 1. **Compilation error:**
    ```
-   Type 'AppFeature.Level.State' does not conform to protocol '_EphemeralState'
+   Type 'Navigation.Screen.State' does not conform to protocol '_EphemeralState'
    ```
 
 2. **Runtime error:**
-   - App shows empty volumetric window
-   - No game flow: intro → opening credits → menu → MPA
+   - App shows blank window or incorrect state
+   - Navigation flow doesn't work
    - State changes not applying
 
 ### The Debugging Journey
 
-**Initial attempt:** Added manual `_EphemeralState` conformance (line 793)
+**Initial attempt:** Added manual `_EphemeralState` conformance
 ```swift
-extension AppFeature.Level.State: _EphemeralState {}
+extension Navigation.Screen.State: _EphemeralState {}
 ```
 **Failed:** `_EphemeralState` is an internal protocol (underscore prefix), not available in public API.
 
-**Second attempt:** Created `LevelAction` enum to wrap actions manually
+**Second attempt:** Created a wrapper action enum to manually handle routing
 **Failed:** Caused cascade of type errors, overcomplicated the architecture.
 
-**Third attempt:** Changed `Level` enum from containing reducer instances to state types
+**Third attempt:** Changed the navigation enum to contain state types instead of reducer instances
 **Failed:** Broke the parent-child composition pattern.
 
 **The real fix:** Restored the closure form of `.ifLet`.
@@ -64,7 +64,7 @@ When you write:
 
 The macro generates the appropriate state composition **and** the `_EphemeralState` conformance **automatically**.
 
-The closure `Level.body` tells the macro:
+The closure `Screen.body` tells the macro:
 1. How to compose the child reducers
 2. That this is an enum-based navigation, not optional state
 3. The proper state management strategy
@@ -75,23 +75,22 @@ Without the closure, the macro cannot infer this intent and requires manual conf
 
 ## The Working Code
 
-### AppFeature.swift (lines 30-36)
+### In the app's navigation reducer
 
 ```swift
 @Reducer
-public enum Level {
-  case intro(IntroLevel)
-  case mpa(MPALevel)
-  case glitch(GlitchLevel)
-  case legacy(LegacyLevel)
+public enum Screen {
+  case first(FirstScreen)
+  case second(SecondScreen)
+  case third(ThirdScreen)
 }
 ```
 
-### AppFeature.swift (lines 875-877)
+### In the parent reducer's body
 
 ```swift
-.ifLet(\.level, action: \.level) {
-  Level.body
+.ifLet(\.screen, action: \.screen) {
+  Screen.body
 }
 ```
 
@@ -128,22 +127,22 @@ var body: some ReducerOf<Self> {
 ### Mistake 1: Removing the Closure
 ```swift
 // ❌ BROKEN
-.ifLet(\.level, action: \.level)
+.ifLet(\.screen, action: \.screen)
 ```
-**Result:** `_EphemeralState` requirement, empty state
+**Result:** `_EphemeralState` requirement, broken navigation
 
 ### Mistake 2: Using Optional Type Directly
 ```swift
 // ❌ This doesn't route actions properly
-@Presents public var level: Level?
+@Presents public var screen: Screen?
 ```
 **Result:** Actions don't reach the child reducers
 
 ### Mistake 3: Missing @Reducer Macro
 ```swift
 // ❌ Broke the composition
-public enum Level {
-  case intro(IntroLevel.State)  // State, not reducer!
+public enum Screen {
+  case first(FirstScreen.State)  // State, not reducer!
 }
 ```
 **Result:** All state access becomes manual, breaks the pattern
@@ -154,13 +153,13 @@ public enum Level {
 
 Use this checklist when using `.ifLet` with @Reducer enums:
 
-- [ ] @Reducer macro present on enum (line 31)
-- [ ] Enum contains reducer instances, not state (line 32-35)
-- [ ] State property is `Level.State?` not `Level?` (line 71)
-- [ ] Action type is `Level.Action` (line 131)
-- [ ] `.ifLet` includes closure with `Level.body` (line 875-877)
+- [ ] @Reducer macro present on enum
+- [ ] Enum contains reducer instances, not state
+- [ ] State property is `Screen.State?` not `Screen?`
+- [ ] Action type is `Screen.Action`
+- [ ] `.ifLet` includes closure with `Screen.body`
 - [ ] No manual `_EphemeralState` conformance needed
-- [ ] Actions route properly: `case .level(.intro(.showOpeningCredits)):`
+- [ ] Actions route properly to child reducers
 
 ---
 
@@ -168,7 +167,7 @@ Use this checklist when using `.ifLet` with @Reducer enums:
 
 This pattern applies to:
 - ✅ Any enum-based navigation (Pattern 3)
-- ✅ Multi-level game flows
+- ✅ Multi-screen navigation flows
 - ✅ Multi-destination presentation
 - ✅ Parent-child reducer composition
 
@@ -188,7 +187,7 @@ This does **not** apply to:
    Write: .ifLet(\.$destination, action: \.destination) { Destination() }
    Not:   .ifLet(\.$destination, action: \.destination)  // ❌ Breaks
    ```
-3. **Update the case study example** (lines 290-292) to include a comment emphasizing the closure
+3. **Update the case study example** to include a comment emphasizing the closure
 
 ---
 
@@ -196,8 +195,8 @@ This does **not** apply to:
 
 - **AGENTS-TCA-PATTERNS.md:** Pattern 3 - Multiple Destinations (Complex Navigation)
 - **TCA Documentation:** `.ifLet` operator with enum reducers
-- **GreenSpurt AppFeature.swift:** Line 875 - Correct .ifLet usage
-- **Original working commit:** Before the closure was removed
+- **Example code:** Correct .ifLet usage with @Reducer enums
+- **Best practice:** Always include closure form for enum-based navigation
 
 ---
 

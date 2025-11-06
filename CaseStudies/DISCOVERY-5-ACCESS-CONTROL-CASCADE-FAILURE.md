@@ -1,7 +1,7 @@
 # DISCOVERY-5: Access Control Cascade Failure in TCA Binding Patterns
 
 **Date:** November 4, 2025
-**Discovery Context:** ScrollApp compilation errors during TCA 1.x binding pattern implementation
+**Discovery Context:** Compilation errors during TCA 1.x binding pattern implementation (content management app)
 **Impact Level:** HIGH - Affects any feature exposing state types with transitive dependencies
 **Framework Documents Affected:** AGENTS-AGNOSTIC.md, AGENTS-SUBMISSION-TEMPLATE.md
 
@@ -22,32 +22,32 @@ When implementing TCA 1.x `@Bindable` binding patterns, a type mismatch error (`
 ### The Apparent Error
 
 ```swift
-// ScrollApp.swift, line 156
-windowGroup("Article Reader") {
-  ArticleReaderView(store: $store.articleSelection)
-    // ERROR: Cannot convert value of type 'Binding<Article.ID??>'
-    //        to expected argument type 'Binding<Article.ID?>'
+// AppFeature.swift, line 156
+windowGroup("Detail View") {
+  DetailView(store: $store.selection)
+    // ERROR: Cannot convert value of type 'Binding<Item.ID??>'
+    //        to expected argument type 'Binding<Item.ID?>'
 }
 ```
 
 **Initial diagnosis:** Double-optional mismatch. Attempted fix: unwrap binding with `??`.
 
-**Why this failed:** The actual problem was `articleSelection` property was `internal`, not exposed to the App module. The compiler couldn't even tell us that—it gave us a symptom instead.
+**Why this failed:** The actual problem was `selection` property was `internal`, not exposed to the App module. The compiler couldn't even tell us that—it gave us a symptom instead.
 
 ### The Cascade
 
-Making `articleSelection` public revealed a chain of hidden violations:
+Making `selection` public revealed a chain of hidden violations:
 
 ```
-articleSelection: Article.ID?
+selection: Item.ID?
   ↓ depends on type
-Article.ID (already public) ✅
+Item.ID (already public) ✅
 
-primarySelection: ArticleSidebarDestination?
+primarySelection: SidebarDestination?
   ↓ depends on type
-ArticleSidebarDestination (was internal) ❌
+SidebarDestination (was internal) ❌
   ↓ depends on type
-ArticleLibraryCategory (was internal) ❌
+Category (was internal) ❌
   ↓ all conformance methods must be public
 Hashable.hash(into:) (was internal) ❌
 Equatable.== (was internal) ❌
@@ -73,22 +73,22 @@ Swift's access control system validates visibility at **declaration time**, not 
 ### Step 1: Reproduce the Error
 
 ```swift
-// In ScrollApp.swift
-@Bindable var store = Store(initialState: ScrollState())
+// In the app's main file
+@Bindable var store = Store(initialState: AppState())
 // ...
-windowGroup("Article Reader") {
-  ArticleReaderView(store: $store.articleSelection)
-  //                         ^^^^^^^^ Error here
+windowGroup("Detail View") {
+  DetailView(store: $store.selection)
+  //                    ^^^^^^^^^ Error here
 }
 ```
 
 ### Step 2: Check Property Declaration
 
 ```swift
-// ArticleQueueFeature.swift line 251
+// In the feature module
 @ObservableState
 struct State {
-  var primarySelection: ArticleSidebarDestination? = nil
+  var selection: SidebarDestination? = nil
   // ^^^ internal by default—not public
 }
 ```
@@ -97,10 +97,10 @@ struct State {
 
 ```swift
 // Fix attempt:
-public var articleSelection: Article.ID?
+public var selection: Item.ID?
 ```
 
-**Result:** New cascade of errors about `ArticleSidebarDestination` not being public.
+**Result:** New cascade of errors about `SidebarDestination` not being public.
 
 ### Step 4: Trace Transitive Dependencies
 
@@ -122,16 +122,16 @@ After making types public, ensure:
 
 ### Minimal Changes Required
 
-**ArticleQueueFeature.swift:**
+**In the feature module:**
 
-1. Make `ArticleLibraryCategory` enum public (line 17)
-2. Make `ArticleSidebarDestination` enum public (line 89)
-3. Make `articleSelection` property public (line 251)
+1. Make `Category` enum public
+2. Make `SidebarDestination` enum public
+3. Make `selection` property public
 4. Ensure all `Hashable` and `Equatable` conformance methods are public
 
 ```swift
-// Line 17 - ArticleLibraryCategory
-public enum ArticleLibraryCategory: Hashable, Equatable {
+// Category enum
+public enum Category: Hashable, Equatable {
   case all
   case favorites
   case reading
@@ -141,9 +141,9 @@ public enum ArticleLibraryCategory: Hashable, Equatable {
   public static func == (lhs: Self, rhs: Self) -> Bool { /* ... */ }
 }
 
-// Line 89 - ArticleSidebarDestination
-public enum ArticleSidebarDestination: Hashable, Equatable {
-  case detail(Article.ID)
+// SidebarDestination enum
+public enum SidebarDestination: Hashable, Equatable {
+  case detail(Item.ID)
   case settings
   // ...
 
@@ -151,24 +151,24 @@ public enum ArticleSidebarDestination: Hashable, Equatable {
   public static func == (lhs: Self, rhs: Self) -> Bool { /* ... */ }
 }
 
-// Line 251 - State property
+// State property
 @ObservableState
 public struct State {
-  public var articleSelection: Article.ID?
+  public var selection: Item.ID?
   // ...
 }
 ```
 
-**ScrollApp.swift:**
+**In the app's main file:**
 
 ```swift
-// Line 32 - Add @Bindable as provided by linter
-@Bindable var store = Store(initialState: ScrollState())
+// Add @Bindable
+@Bindable var store = Store(initialState: AppState())
 
-// Line 156 - Direct binding projection now works
-windowGroup("Article Reader") {
-  ArticleReaderView(store: $store.articleSelection)
-  // ✅ Now compiles: articleSelection is public, binding projection works
+// Direct binding projection now works
+windowGroup("Detail View") {
+  DetailView(store: $store.selection)
+  // ✅ Now compiles: selection is public, binding projection works
 }
 ```
 
@@ -200,8 +200,8 @@ Use this when you encounter access control errors:
   - [ ] Check: any generic type parameters
 
 - [ ] Do all transitive types need to be public?
-  - [ ] Direct type (ArticleSidebarDestination)
-  - [ ] Types used by that type (ArticleLibraryCategory)
+  - [ ] Direct type (SidebarDestination)
+  - [ ] Types used by that type (Category)
   - [ ] Protocol conformances (Hashable.hash, Equatable.==)
 
 - [ ] Does this violate module boundaries?
