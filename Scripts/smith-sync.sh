@@ -86,6 +86,20 @@ log_success "Framework validation passed"
 # Create Smith directory in target
 mkdir -p "$TARGET_PROJECT/Smith"
 
+# Cleanup: Remove old structure files if they exist (from pre-v1.1)
+log_info "Cleaning up old files..."
+if [ -d "$TARGET_PROJECT/Smith/Sources" ]; then
+  rm -rf "$TARGET_PROJECT/Smith/Sources"
+  log_success "Removed old Sources/ directory (v1.0 structure)"
+fi
+
+# Remove editor/system files
+find "$TARGET_PROJECT/Smith" -name ".DS_Store" -delete 2>/dev/null || true
+find "$TARGET_PROJECT/Smith" -name "*.swp" -delete 2>/dev/null || true
+find "$TARGET_PROJECT/Smith" -name "*~" -delete 2>/dev/null || true
+
+log_success "Cleanup complete"
+
 # Sync Sources (everything except CLAUDE.md)
 log_info "Syncing Sources..."
 if command -v rsync &> /dev/null; then
@@ -187,6 +201,51 @@ cat > "$TARGET_PROJECT/.smith-sync-manifest.json" <<EOF
 EOF
 
 log_success "Created sync manifest"
+
+# Create protection marker + README
+log_info "Creating auto-management markers..."
+cat > "$TARGET_PROJECT/Smith/.smith-managed" <<'EOF'
+⚠️  AUTO-MANAGED BY SMITH SYNC SYSTEM
+
+This directory is automatically managed by smith-sync.sh
+
+DO NOT:
+- Edit files directly here (they'll be overwritten)
+- Delete or rename files
+- Commit changes to Smith/ files
+- Move this directory
+
+IF YOU NEED CHANGES:
+- Submit a DISCOVERY case study to Smith repo
+- Customize CLAUDE.md (root level) for project-specific guidance
+- Read Smith/SMITH-FRAMEWORK-ESSENTIALS.md for patterns
+
+SYNC COMMAND:
+  /path/to/Smith/Scripts/smith-sync.sh /path/to/this/project
+
+VERSION:
+  See ../.smith-sync-manifest.json
+EOF
+
+# Rename our template to README.md
+if [ -f "$TARGET_PROJECT/Smith/Smith-README.md" ]; then
+  mv "$TARGET_PROJECT/Smith/Smith-README.md" "$TARGET_PROJECT/Smith/README.md"
+  log_success "Created Smith/README.md (auto-management guide)"
+fi
+
+# Create Smith/.gitignore to exclude system files
+cat > "$TARGET_PROJECT/Smith/.gitignore" <<'EOF'
+# System files (auto-generated, not tracked)
+.DS_Store
+*.swp
+*~
+.claude/
+
+# Sync temporary files (shouldn't be here, but just in case)
+.smith-sync-*.tmp
+EOF
+
+log_success "Created Smith/.gitignore"
 
 # Summary
 echo ""
