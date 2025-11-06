@@ -6,6 +6,12 @@ This is a **living document framework** that evolves as you discover new pattern
 
 ---
 
+## The Smith Philosophy
+
+> **Smith is opinionated, dense, and evolving. That's not a flaw—that's exactly how a discipline should work. Rather than unlimited freedom with no safety net, Smith provides constraints that prevent bugs before they happen.**
+
+---
+
 ## What Is Smith?
 
 Smith consolidates:
