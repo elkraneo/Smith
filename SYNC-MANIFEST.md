@@ -4,17 +4,18 @@ This file tracks distribution of the Smith framework to projects.
 
 **Last Updated:** 2025-11-06
 **Framework Version:** v1.1+
-**Latest Sync Commit:** 5a6c006
+**Latest Sync Commit:** e85e0e3
+**Synced Projects:** 2/2 (GreenSpurt + Scroll)
 
 ---
 
 ## Synced Projects
 
-| Project | Last Sync | Smith Commit | Status |
-|---------|-----------|--------------|--------|
-| GreenSpurt | 2025-11-06 13:36 UTC | 5a6c006 | ✅ Current |
-| Scroll | 2025-11-06 13:37 UTC | 5a6c006 | ✅ Current |
-| Your Project | - | - | ⏳ To Be Synced |
+| Project | Location | Last Sync | Smith Commit | Status |
+|---------|----------|-----------|--------------|--------|
+| GreenSpurt | `/Volumes/Plutonian/GreenSpurt` | 2025-11-06 13:36 UTC | 5a6c006 | ✅ Current |
+| Scroll | `/Volumes/Plutonian/_Developer/Scroll/source/Scroll` | 2025-11-06 13:40 UTC | e85e0e3 | ✅ Current |
+| Your Project | - | - | - | ⏳ To Be Synced |
 
 ---
 
