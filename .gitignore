@@ -1,1 +1,13 @@
 .DS_Store
+
+# Sync script temporary files (from smith-sync.sh)
+smith-sync.log
+.smith-sync-*.tmp
+CLAUDE.md.NEW
+CLAUDE.md.backup
+
+# Editor/system files
+*.swp
+*.swo
+*~
+.claude/
