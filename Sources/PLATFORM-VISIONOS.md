@@ -233,6 +233,89 @@ private func configureButton(for button: Entity, in container: Entity) {
 
 ---
 
+### [CRITICAL] Entity Cleanup on State Transitions
+
+**Problem:** `ViewAttachmentComponent` references SwiftUI views that observe TCA stores. When level/feature transitions occur:
+1. TCA state is cleared ✓
+2. But RealityKit entities persist in scene ✗
+3. Stale entities reference old store/state → non-interactive views
+
+**Pattern: Explicit Entity Cleanup BEFORE Level Transition**
+
+```swift
+// GameView+Level.swift
+extension GameView {
+  /// Called when current level changes
+  func onLevelChange(_ oldLevel: CurrentLevel, _ newLevel: CurrentLevel) {
+    // ✅ Clear RealityKit entities BEFORE new level setup
+    clearLevelSpecificEntities(for: oldLevel)
+
+    // Then set up new level
+    setupLevel(newLevel)
+  }
+
+  private func clearLevelSpecificEntities(for level: CurrentLevel) {
+    switch level {
+    case .intro, .glitch, .legacy:
+      // ✅ Clear screen button popovers
+      game.renderer.clearScreenButtonPopovers()
+
+    case .mpa:
+      // ✅ Clear MPA-specific entities
+      game.renderer.clearMPAEntities()
+    }
+  }
+}
+
+// GameRenderer+Button3D.swift
+extension GameRenderer {
+  /// Clear all screen button popover entities when transitioning levels.
+  ///
+  /// Called from `GameView.onLevelChange()` to prevent stale entities.
+  /// This is critical for preventing non-interactive UI when `ViewAttachmentComponent`
+  /// references old store state.
+  public func clearScreenButtonPopovers() {
+    for (_, entity) in screenButtonPopoverEntities {
+      entity.removeFromParent()  // ✅ Remove from RealityKit scene
+    }
+    screenButtonPopoverEntities.removeAll()  // ✅ Clear dictionary
+  }
+}
+
+// Usage in RealityView
+.onAppear {
+  gameView.$store.changes
+    .map(\.currentLevel)
+    .removeDuplicates()
+    .sink { newLevel in
+      gameView.onLevelChange(gameView.store.currentLevel, newLevel)
+    }
+    .store(in: &cancellables)
+}
+```
+
+**Verification Checklist:**
+
+- [ ] Entity cleanup method exists (`clearXEntities()`)
+- [ ] Method called in level/feature transition handler
+- [ ] Method called BEFORE new level setup (not after)
+- [ ] Entities removed from parent (`removeFromParent()`)
+- [ ] Entity dictionary/storage cleared (`.removeAll()`)
+- [ ] New entities created fresh (not reused from previous state)
+- [ ] No orphaned entities in scene after transition
+
+**Why This Matters:**
+
+When `ViewAttachmentComponent` wraps a SwiftUI view that observes a TCA store:
+- The attachment holds a strong reference to the view
+- The view observes the store state
+- If the store is cleared but entity isn't, the view still exists with stale data
+- Interactions on the stale view won't work (they reference cleared state)
+
+**Related:** See DISCOVERY-4 for entity creation patterns, DISCOVERY-12 for real-world impact.
+
+---
+
 ## ImmersiveSpace Lifecycle
 
 ### Opening & Closing Immersive Space

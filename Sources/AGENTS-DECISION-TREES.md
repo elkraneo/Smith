@@ -4,6 +4,84 @@ This document provides **decision trees** to answer the most common architectura
 
 ---
 
+## Pre-Tree: Should I Extract This Inline Reducer?
+
+**Use this FIRST if you have a @Reducer defined inside another @Reducer.**
+
+**Problem:** Inline nested reducers grow quickly. Without extraction guidance, they become 800+ line files mixing multiple concerns. See DISCOVERY-12 for real-world impact.
+
+```
+Do you have a @Reducer defined INSIDE another @Reducer?
+├─ NO → Skip to Tree 1
+│
+└─ YES → Answer these questions:
+
+    1. How many lines is the inline reducer?
+    ├─ < 100 lines → Keep inline (for now)
+    ├─ 100-200 lines → Check other criteria below
+    └─ > 200 lines → EXTRACT IMMEDIATELY [CRITICAL]
+       Why: 200+ lines is the hard threshold
+       Action: Move to separate file, then to module
+
+    2. How many distinct action cases? (count .case entries)
+    ├─ < 3 cases → Keep inline
+    └─ ≥ 3 cases → Check next criterion
+
+    3. How many state properties?
+    ├─ < 4 properties → Keep inline
+    └─ ≥ 4 properties → Check next criterion
+
+    4. Does it have its own Delegate actions?
+    ├─ NO → Keep inline
+    └─ YES → EXTRACT [STANDARD]
+       Why: Delegates need clear parent-child boundary
+
+    5. Is it used by 2+ parent reducers?
+    ├─ NO → Keep inline if < 200 lines
+    └─ YES → EXTRACT [STANDARD]
+       Why: Reusable component shouldn't be nested
+
+┌──────────────────────────────────────────┐
+│ EXTRACTION THRESHOLD SUMMARY              │
+├──────────────────────────────────────────┤
+│ < 100 lines → Keep inline                │
+│ 100-200 lines → Extract if 3+ criteria ✓ │
+│ > 200 lines → Extract immediately [!]   │
+└──────────────────────────────────────────┘
+
+When you EXTRACT:
+1. Create separate file: FeatureName.swift
+2. Move @Reducer to new file
+3. Update parent to import and compose
+4. Later: Extract to Swift Package module (Tree 1)
+
+Example Extraction:
+// Before: GameEngine.swift (1200 lines with 850-line inline reducer)
+@Reducer
+struct GameEngine {
+  @Reducer
+  struct HintSystem { /* 850 lines */ }
+}
+
+// After: HintsFeature.swift (400 lines, separate)
+@Reducer
+struct HintsFeature { /* extracted logic */ }
+
+// GameEngine.swift (800 lines, just game logic)
+@Reducer
+struct GameEngine {
+  .ifLet(\.hints, action: \.hints) {
+    HintsFeature()  // Clean composition
+  }
+}
+
+See DISCOVERY-12 for complete extraction pattern.
+```
+
+**When in Doubt:** Extract. It's easier to keep simple things together later than to untangle complex things now.
+
+---
+
 ## Tree 1: When Should I Create a Swift Package Module?
 
 **Use this tree when deciding whether to extract a feature into a separate Swift Package module or keep it in the monolithic app target.**
@@ -325,6 +403,104 @@ DECISION TABLE
 | Design tokens | Core | Shared, reusable |
 | Tests | Tests/ | Always separate test target |
 ```
+
+---
+
+---
+
+## Tree 5: Feature Already Exists Under Different Name?
+
+**Use this BEFORE implementing a "new" feature. Duplication creates maintenance burden and bugs.**
+
+**Problem:** WatcherAssist + HintSystem = same thing, different names. Caused -850 lines of duplicate code and infinite loops. See DISCOVERY-12.
+
+```
+New feature request arrives
+├─ YES, it's genuinely new → Proceed to Tree 1
+│
+└─ MAYBE, similar to something else?
+
+    Search codebase for related functionality:
+    ├─ rg "FeatureKeyword|AlternativeName" --type swift
+    ├─ rg "SimilarState|SimilarAction" --type swift
+    └─ rg "ButtonID.*feature" --type swift
+
+    Check for DUPLICATE STATE TYPES
+    ├─ Do similar state types exist?
+    │  ├─ YES → Compare properties
+    │  │  ├─ 80%+ overlap? → SAME FEATURE, different name [CONSOLIDATE]
+    │  │  └─ < 50% overlap? → Separate features, proceed
+    │  └─ NO → New feature, proceed
+    │
+    └─ Check for DUPLICATE ACTION ENUMS
+       ├─ Do similar action enums exist?
+       │  ├─ Same case names? → SAME FEATURE [CONSOLIDATE]
+       │  ├─ Same effects? → SAME FEATURE [CONSOLIDATE]
+       │  └─ Completely different? → Separate features, proceed
+       │
+       └─ Check for DUPLICATE BUTTON IDs / ENTITY KEYS
+          ├─ Same UI element? → SAME FEATURE [CONSOLIDATE]
+          ├─ Active simultaneously? → Separate features
+          └─ Mutually exclusive? → SAME FEATURE [CONSOLIDATE]
+
+RED FLAGS - Duplication Detected:
+  ⚠️  Two button IDs for same visual UI element
+  ⚠️  Two state types with identical/overlapping properties
+  ⚠️  Two action enums with identical case names
+  ⚠️  Two reducers handling same events differently
+  ⚠️  Comments like "// TODO: Unify with X feature"
+  ⚠️  Parallel code paths doing the same job
+
+CONSOLIDATION PROCESS:
+1. Pick ONE canonical name (most descriptive)
+   ✓ Example: HintsFeature (not WatcherAssist, not HintSystem)
+
+2. Rename all occurrences systematically
+   rg "WatcherAssist|watcherAssist" --type swift
+   # Use IDE refactor or sed to rename
+
+3. Delete duplicate implementations
+   - Remove redundant state types
+   - Remove redundant action enums
+   - Remove redundant reducers
+
+4. Update button IDs / entity keys
+   // Before:
+   Button3DID.watcherAssist
+   Button3DID.hintSystem
+
+   // After:
+   Button3DID.hints  // ✅ ONE canonical name
+
+5. Merge unique functionality (if any)
+   - If both had features the other didn't, merge into canonical
+
+REAL-WORLD EXAMPLE (GreenSpurt):
+Audit revealed:
+  • WatcherAssistPopoverState ≈ HintSystemState (identical)
+  • WatcherAssistAction ≈ HintSystemAction (identical)
+  • Button3DID.watcherAssist ≈ Button3DID.hintSystem (same button)
+
+Consolidation:
+  1. Canonical name: HintsFeature
+  2. Deleted: WatcherAssistPopoverState
+  3. Renamed: hintSystem → hints
+  4. Unified: Button3DID.hints (one button)
+  5. Result: -450 lines of duplicate code
+  6. Impact: Bugs resolved, architecture clearer
+```
+
+**Verification Checklist:**
+- [ ] Searched for similar functionality in codebase
+- [ ] Compared state type properties (checked for >80% overlap)
+- [ ] Compared action enum cases (checked for duplicates)
+- [ ] Checked button IDs / entity keys (verified not same element)
+- [ ] If duplication found: Picked canonical name
+- [ ] Renamed all occurrences consistently
+- [ ] Deleted duplicate implementations
+- [ ] Verified no parallel code paths doing same job
+
+**Reference:** See DISCOVERY-12 for complete consolidation pattern and impact analysis.
 
 ---
 

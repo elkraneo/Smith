@@ -6,6 +6,48 @@ This document tracks major changes, discoveries, and improvements to the Smith f
 
 ## Version History
 
+### v1.1.1 - Module Boundaries & Delegate Patterns (November 10, 2025)
+
+**Theme:** Prevent architectural antipatterns through early detection and clear patterns
+
+**Major Discovery Added:**
+- ✅ DISCOVERY-12 - Module Boundary Violation (Inline Reducer Anti-Pattern)
+  - Problem: 850-line inline reducer causing infinite loops, duplication, stale entities
+  - Solution: 4 new patterns + 2 decision tree additions
+  - Impact: -2000 lines, architecture clarified, bugs prevented
+
+**New Patterns:**
+- ✅ Pattern 6 (AGENTS-TCA-PATTERNS.md): Delegate Action Flow with verification checklist
+- ✅ Pre-Tree (AGENTS-DECISION-TREES.md): Inline reducer extraction threshold (200 lines)
+- ✅ Tree 5 (AGENTS-DECISION-TREES.md): Feature naming consolidation audit
+- ✅ visionOS: Entity cleanup on state transitions (PLATFORM-VISIONOS.md)
+
+**Enforcement Levels:**
+- [CRITICAL] Extract inline reducers > 200 lines immediately
+- [CRITICAL] Entity cleanup BEFORE level transitions
+- [STANDARD] Verify delegate flow (no re-forwarding)
+- [STANDARD] Audit for duplicate features before implementation
+
+**Prevention Checklists Added:**
+- Delegate flow verification (7 items)
+- Entity cleanup verification (7 items)
+- Feature duplication audit (8 items)
+- Inline reducer extraction (5 criteria)
+
+**Testing Patterns:**
+- `await store.finish()` detects infinite delegate loops
+- Manual entity count verification before/after transitions
+
+**Files Modified:**
+- CaseStudies/DISCOVERY-12-MODULE-BOUNDARY-VIOLATION.md (12K new)
+- AGENTS-TCA-PATTERNS.md (Pattern 6, 270 lines)
+- AGENTS-DECISION-TREES.md (Pre-Tree + Tree 5, 300 lines)
+- PLATFORM-VISIONOS.md (Entity cleanup section, 150 lines)
+
+**Related:** GreenSpurt refactor (HintsFeature extraction, -2000 lines)
+
+---
+
 ### v1.1.0 - Automation & Onboarding (November 10, 2025)
 
 **Theme:** Reduce cognitive load, automate compliance, establish clear processes

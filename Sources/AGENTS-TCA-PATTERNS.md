@@ -665,6 +665,279 @@ struct DisplayFeature {
 
 ---
 
+## Pattern 6: Delegate Action Flow (Parent-Child Communication)
+
+**Use case:** Child reducer needs to communicate events to parent (navigation, completion, errors, state changes that affect parent).
+
+**Key Principle:** Delegates flow UP the hierarchy exactly once. Child sends `.delegate(X)`, parent handles it and MAY send `.delegate(Y)` to its parent (different action). Never re-forward the same delegate.
+
+### The Pattern
+
+```swift
+// ✅ CORRECT: Child sends delegate, parent maps to its own delegate
+
+// Child Feature
+@Reducer
+public struct ChildFeature {
+  @ObservableState
+  public struct State: Equatable {
+    public var isLoading: Bool = false
+    public var result: String = ""
+  }
+
+  public enum Action: Sendable {
+    case buttonTapped
+    case taskCompleted(String)
+
+    // Delegate actions for parent communication
+    public enum Delegate: Sendable {
+      case completed(result: String)
+      case cancelled
+      case errorOccurred(Error)
+    }
+    case delegate(Delegate)
+  }
+
+  public var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .buttonTapped:
+        state.isLoading = true
+        return .run { send in
+          let result = await performTask()
+          await send(.taskCompleted(result))
+        }
+
+      case .taskCompleted(let result):
+        // Do child-specific cleanup
+        state.isLoading = false
+        state.result = result
+        // Send ONE delegate UP to parent
+        return .send(.delegate(.completed(result: result)))
+
+      case .delegate:
+        // Child never handles its own delegates
+        return .none
+      }
+    }
+  }
+}
+
+// Parent Feature
+@Reducer
+public struct ParentFeature {
+  @ObservableState
+  public struct State: Equatable {
+    @Presents var child: ChildFeature.State?
+    public var childResults: [String] = []
+  }
+
+  public enum Action: Sendable {
+    case showChild
+    case child(PresentationAction<ChildFeature.Action>)
+
+    // Parent's own delegates (different from child's)
+    public enum Delegate: Sendable {
+      case allTasksCompleted(results: [String])
+      case workflowCancelled
+    }
+    case delegate(Delegate)
+  }
+
+  public var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case .showChild:
+        state.child = ChildFeature.State()
+        return .none
+
+      // ✅ CORRECT: Map child delegate to parent delegate (different action)
+      case .child(.presented(.delegate(.completed(let result)))):
+        state.child = nil  // Clean up child state
+        state.childResults.append(result)
+
+        // Send NEW delegate to grandparent (if needed)
+        if state.childResults.count >= 3 {
+          return .send(.delegate(.allTasksCompleted(results: state.childResults)))
+        }
+        return .none
+
+      case .child(.presented(.delegate(.cancelled))):
+        state.child = nil
+        // Send different delegate to grandparent
+        return .send(.delegate(.workflowCancelled))
+
+      case .child(.presented(.delegate(.errorOccurred))):
+        state.child = nil
+        // Handle error, don't propagate to grandparent
+        return .none
+
+      // ❌ NEVER DO THIS:
+      // case .delegate(.allTasksCompleted):
+      //   return .send(.delegate(.allTasksCompleted))  // INFINITE LOOP!
+
+      case .delegate:
+        // Parent never handles its own delegates (grandparent does)
+        return .none
+      }
+    }
+    .ifLet(\.$child, action: \.child) {
+      ChildFeature()
+    }
+  }
+}
+```
+
+### Anti-Pattern: Delegate Re-Forwarding
+
+```swift
+// ❌ WRONG: Re-forwarding same delegate creates infinite loop
+@Reducer
+public struct BadParent {
+  public enum Action {
+    case child(PresentationAction<ChildFeature.Action>)
+    public enum Delegate {
+      case taskCompleted(String)  // ← Same as child's delegate!
+    }
+    case delegate(Delegate)
+  }
+
+  public var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      // ❌ WRONG: Re-forwarding same delegate
+      case .delegate(.taskCompleted(let result)):
+        // Some logic...
+        return .send(.delegate(.taskCompleted(result)))  // INFINITE LOOP!
+
+      // ❌ WRONG: Mapping child delegate to same name in parent
+      case .child(.presented(.delegate(.completed(let result)))):
+        // Cleans up child...
+        return .send(.delegate(.taskCompleted(result)))  // Then triggers above!
+      }
+    }
+  }
+}
+```
+
+**Why this is wrong:**
+1. `case .delegate(.taskCompleted)` sends `.send(.delegate(.taskCompleted))`
+2. Which triggers `case .delegate(.taskCompleted)` again
+3. Infinite loop, app hangs or crashes
+
+### Verification Checklist
+
+Use this checklist before merging any parent-child reducer integration:
+
+- [ ] Child reducer sends `.delegate(X)` to communicate with parent
+- [ ] Parent handles `.delegate(X)` in `case .child(.presented(.delegate(X))):`
+- [ ] Parent does NOT have `case .delegate(X): return .send(.delegate(X))`
+- [ ] Parent MAY send `.delegate(Y)` to its parent (different action name)
+- [ ] Delegate enum names are unique per reducer level (no collisions)
+- [ ] No action appears in BOTH `case .delegate(X):` and `.send(.delegate(X))`
+- [ ] TestStore test includes `await store.finish()` to catch infinite loops
+
+### Testing Strategy
+
+```swift
+@Test @MainActor
+func childDelegateMappedToParent() async {
+  let store = TestStore(initialState: ParentFeature.State()) {
+    ParentFeature()
+  }
+
+  // Show child
+  await store.send(.showChild) {
+    $0.child = ChildFeature.State()
+  }
+
+  // Trigger child action that sends delegate
+  await store.send(.child(.presented(.taskCompleted("result")))) {
+    $0.child?.isLoading = false
+    $0.child?.result = "result"
+  }
+
+  // ✅ Verify child sends delegate
+  await store.receive(\.child.presented.delegate.completed) { result in
+    #expect(result == "result")
+  }
+
+  // ✅ Verify parent maps to its own delegate
+  await store.receive(\.child.dismiss) {
+    $0.child = nil
+    $0.childResults = ["result"]
+  }
+
+  // ✅ No infinite effects (this would hang if loop exists)
+  await store.finish()
+}
+
+@Test @MainActor
+func delegateDoesNotCreateInfiniteLoop() async {
+  let store = TestStore(initialState: ParentFeature.State()) {
+    ParentFeature()
+  }
+
+  await store.send(.showChild)
+  await store.send(.child(.presented(.taskCompleted("test"))))
+
+  // ✅ If there's an infinite loop, .finish() will timeout
+  await store.finish()  // Pass = no loop, Timeout = loop detected
+}
+```
+
+### Common Patterns
+
+#### Pattern A: Terminal Delegate (No Propagation)
+
+```swift
+case .child(.presented(.delegate(.cancelled))):
+  state.child = nil
+  // ✅ Handle locally, don't send to grandparent
+  return .none
+```
+
+#### Pattern B: Mapped Delegate (Propagate with Different Name)
+
+```swift
+case .child(.presented(.delegate(.completed(let result)))):
+  state.child = nil
+  state.results.append(result)
+  // ✅ Send different delegate to grandparent
+  return .send(.delegate(.workflowStepCompleted(result: result)))
+```
+
+#### Pattern C: Conditional Delegate (Only Propagate Sometimes)
+
+```swift
+case .child(.presented(.delegate(.itemSelected(let id)))):
+  state.child = nil
+  state.selectedItems.append(id)
+
+  // ✅ Only send delegate when threshold reached
+  if state.selectedItems.count >= 5 {
+    return .send(.delegate(.selectionComplete(ids: state.selectedItems)))
+  }
+  return .none
+```
+
+### Key Points
+
+- **Flow direction:** Delegates always flow UP (child → parent → grandparent)
+- **Mapping:** Parent maps child delegates to its own delegates (different names)
+- **Never re-forward:** Never `case .delegate(X): return .send(.delegate(X))`
+- **Unique names:** Each reducer level has unique delegate enum
+- **Testing:** Use `await store.finish()` to catch infinite loops
+- **Terminal actions:** Some delegates handled locally, not propagated
+
+### Why This Works
+
+Delegate actions separate **internal reducer logic** from **parent communication**. Child reducers can evolve independently while maintaining a stable delegate API. Parents decide how to interpret child delegates without coupling to child implementation details. This prevents tight coupling and makes reducers composable and testable.
+
+**Reference:** See DISCOVERY-12 for real-world example of delegate re-forwarding causing infinite loops.
+
+---
+
 ## Common Mistakes (Anti-Patterns)
 
 ### ❌ Mistake 1: Using Deprecated APIs
