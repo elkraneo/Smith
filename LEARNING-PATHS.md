@@ -1,15 +1,33 @@
 # Smith Learning Paths: Beginner → Expert
 
-**Choose your path based on your role, experience level, and immediate needs.**
+**FOR HUMANS ONLY. AI agents: See [AGENT-ROUTING.md](AGENT-ROUTING.md) for task-based routing.**
 
 ---
 
-## Quick Path Selection
+## Important: Humans vs AI Agents
+
+### This Document Is For Humans
+
+These paths assume:
+- You have prior experience (or lack thereof)
+- You're building expertise over time
+- You want to understand Smith comprehensively
+
+### AI Agents Should Use AGENT-ROUTING.md
+
+Agents are **stateless** and should route based on **task type**, not "experience level":
+- ✅ **Task-based:** "This is a TCA task → Read QUICK-START.md Rules 2-4"
+- ❌ **Experience-based:** "I'm a beginner → Read Beginner Path" (meaningless for agents)
+
+**AI Agents:** Stop reading this document. Read [AGENT-ROUTING.md](AGENT-ROUTING.md) instead.
+
+---
+
+## Quick Path Selection (Humans Only)
 
 | Situation | Start Here | Time |
 |-----------|------------|------|
 | 🆕 New to Smith | Beginner Path | 15 min |
-| 🤖 AI Agent starting task | Quick Start Path | 5 min |
 | 👨‍💻 Human developer new to project | Developer Path | 30 min |
 | 🏗️ Architect/lead | Architect Path | 60 min |
 | 🔧 Fixing specific bug | Problem-Solving Path | Variable |
@@ -60,47 +78,7 @@ Move to **Developer Path** when:
 
 ---
 
-## Path 2: Quick Start (AI Agents - 5 minutes)
-
-**Goal:** Execute task with minimum context, maximum correctness.
-
-### Steps
-
-1. **Read QUICK-START.md** (3 min)
-   - Focus on the 10 Critical Rules
-   - Skim the 5 Most Common Mistakes
-
-2. **Scan task-specific pattern** (1 min)
-   - TCA reducer: QUICK-START.md Rules 2-4
-   - Testing: QUICK-START.md Rule 6-7
-   - Dependencies: QUICK-START.md Rule 5
-   - visionOS entities: QUICK-START.md Rule 9
-
-3. **Start coding with checklist** (1 min)
-   - Use TodoWrite to track sub-tasks
-   - Reference QUICK-START.md during implementation
-   - Run compliance check before submitting
-
-### Deep Dive When Needed
-
-If you hit complexity, read:
-- **TCA issues:** AGENTS-TCA-PATTERNS.md (15 min)
-- **Access control errors:** AGENTS-AGNOSTIC.md lines 443-598 (10 min)
-- **Concurrency bugs:** AGENTS-AGNOSTIC.md lines 162-313 (15 min)
-- **visionOS entity issues:** PLATFORM-VISIONOS.md + DISCOVERY-4 (10 min)
-
-### Submission Checklist
-
-Before marking task complete:
-- [ ] Read relevant QUICK-START.md rules
-- [ ] Ran `Scripts/check-compliance.sh .`
-- [ ] No CRITICAL violations
-- [ ] Warnings addressed or documented
-- [ ] Tests added (if applicable)
-
----
-
-## Path 3: Developer (30 minutes)
+## Path 2: Developer (30 minutes)
 
 **Goal:** Understand patterns deeply enough to work independently.
 
@@ -146,7 +124,7 @@ Move to **Architect Path** when:
 
 ---
 
-## Path 4: Architect (60 minutes)
+## Path 3: Architect (60 minutes)
 
 **Goal:** Make sound architectural decisions and guide team.
 
@@ -193,7 +171,7 @@ Move to **Expert Path** when:
 
 ---
 
-## Path 5: Problem-Solving (Variable time)
+## Path 4: Problem-Solving (Variable time)
 
 **Goal:** Fix a specific bug or issue quickly.
 
@@ -251,7 +229,7 @@ Move to **Expert Path** when:
 
 ---
 
-## Path 6: Expert (4 hours)
+## Path 5: Expert (4 hours)
 
 **Goal:** Comprehensive understanding of entire Smith framework.
 
@@ -316,16 +294,16 @@ Move to **Expert Path** when:
 
 ---
 
-## Learning Path Comparison
+## Learning Path Comparison (Humans Only)
 
-| Feature | Beginner | Quick Start | Developer | Architect | Expert |
-|---------|----------|-------------|-----------|-----------|--------|
-| Time | 15 min | 5 min | 30 min | 60 min | 4 hours |
-| Can code | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Can architect | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Can evaluate | ❌ | ❌ | ❌ | ⚠️ | ✅ |
-| Can teach | ❌ | ❌ | ⚠️ | ✅ | ✅ |
-| Can maintain | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Feature | Beginner | Developer | Architect | Expert |
+|---------|----------|-----------|-----------|--------|
+| Time | 15 min | 30 min | 60 min | 4 hours |
+| Can code | ✅ | ✅ | ✅ | ✅ |
+| Can architect | ❌ | ❌ | ✅ | ✅ |
+| Can evaluate | ❌ | ❌ | ⚠️ | ✅ |
+| Can teach | ❌ | ⚠️ | ✅ | ✅ |
+| Can maintain | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -334,8 +312,9 @@ Move to **Expert Path** when:
 ### By Role
 
 **AI Agents:**
-- Primary: QUICK-START.md
-- Deep dive: AGENTS-TCA-PATTERNS.md
+- **Routing:** [AGENT-ROUTING.md](AGENT-ROUTING.md) - Task-based reading decisions
+- Primary: QUICK-START.md (after routing)
+- Deep dive: AGENTS-TCA-PATTERNS.md (specific patterns only)
 - Submission: Tests/AGENTS-SUBMISSION-TEMPLATE.md
 
 **Developers:**
@@ -386,12 +365,17 @@ Move to **Expert Path** when:
 
 ---
 
-## FAQ
+## FAQ (Humans)
 
-### How do I know which path to follow?
+### Are you an AI agent?
+
+**Stop. This document is not for you.** Read [AGENT-ROUTING.md](AGENT-ROUTING.md) instead.
+
+AI agents don't have "experience levels" - you route based on task type, not self-assessment.
+
+### How do I know which path to follow? (Humans)
 
 - **First time?** → Beginner Path
-- **AI agent with task?** → Quick Start Path
 - **Daily coding?** → Developer Path
 - **Making decisions?** → Architect Path
 - **Specific bug?** → Problem-Solving Path

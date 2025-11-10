@@ -14,26 +14,77 @@ You are a senior Swift engineer building production-quality Apple platform apps.
 
 ---
 
-## CRITICAL: Read These FIRST Before Any Task
+## CRITICAL: Don't Read Everything - Read What's Relevant
 
-**Every task starts the same way:**
+**You are stateless. You don't have an "experience level." Route based on the TASK, not your non-existent experience.**
 
-1. **AGENTS-AGNOSTIC.md** (lines 24–79) - State management rules. Non-negotiable.
-2. **AGENTS-TCA-PATTERNS.md** - The canonical TCA patterns document. **If you write any TCA code without reading this, you will fail.**
-3. **Platform-specific guide** - If the task mentions visionOS, watchOS, or macOS, read the platform guide.
-4. **This document (CLAUDE.md)** - You're reading it now.
+### Step 1: Classify the Task (30 seconds)
 
-**You are not allowed to:**
-- Skip these documents and "wing it" based on general knowledge
-- Assume you know TCA patterns already
-- Write code first, then check guidelines
-- Treat these as optional reference material
+Look at the user's request and identify:
+- **Keywords:** "test", "TCA", "visionOS", "dependency", "bug", "access control"
+- **Files involved:** *Tests.swift, *Feature.swift, RealityView files, etc.
+- **Error messages:** Type mismatches, deprecation warnings, action routing failures
 
-**You must:**
-- Read the relevant section entirely
-- Understand the enforcement level ([CRITICAL]/[STANDARD]/[GUIDANCE])
-- Check the verification checklist against your implementation
-- Call out any conflicts between the guidance and the task request
+### Step 2: Route to Minimum Reading (see AGENT-ROUTING.md)
+
+| Task Type | Read This First | Time | Then Read If Needed |
+|-----------|-----------------|------|---------------------|
+| **Testing** | QUICK-START.md Rules 6-7 | 2 min | AGENTS-AGNOSTIC.md lines 75-111 if complex |
+| **TCA reducer** | QUICK-START.md Rules 2-4 | 3 min | AGENTS-TCA-PATTERNS.md specific pattern if complex |
+| **visionOS entities** | QUICK-START.md Rule 9 | 2 min | PLATFORM-VISIONOS.md + DISCOVERY-4 if PresentationComponent |
+| **Dependencies** | QUICK-START.md Rule 5 | 2 min | AGENTS-DECISION-TREES.md Tree 2 if choosing pattern |
+| **Access control error** | QUICK-START.md Rule 8 + DISCOVERY-5 | 5 min | AGENTS-AGNOSTIC.md lines 443-598 if still confused |
+| **Architecture decision** | AGENTS-DECISION-TREES.md relevant tree | 5 min | AGENTS-TASK-SCOPE.md if defining scope |
+| **Bug fix** | Search CaseStudies/ for symptom | 2 min | Read matching DISCOVERY |
+| **Unclear task** | QUICK-START.md entire doc | 5 min | Ask clarifying questions |
+
+**Full routing logic:** See [AGENT-ROUTING.md](../AGENT-ROUTING.md) for complete decision tree.
+
+### Step 3: Start Minimal, Expand Only If Needed
+
+```
+User: "Add a boolean flag 'isLoading' to LoginFeature state"
+
+❌ DON'T DO THIS:
+  Read AGENTS-AGNOSTIC.md entirely (30 min)
+  Read AGENTS-TCA-PATTERNS.md entirely (40 min)
+  Read AGENTS-DECISION-TREES.md entirely (20 min)
+  Total wasted time: 90 minutes
+
+✅ DO THIS:
+  Classify: TCA task (simple state addition)
+  Read: QUICK-START.md Rule 1 (2 min)
+  Implement: Add `var isLoading = false` to State struct
+  Verify: Run Scripts/check-compliance.sh .
+  Total time: 5 minutes
+```
+
+**Reading budget: 80% of tasks should need < 15 minutes of reading.**
+
+### Step 4: Search Case Studies for Bugs FIRST
+
+If the task is a bug fix or error:
+
+```bash
+# Search for the symptom
+grep -r "error message keyword" CaseStudies/
+
+# If found, read the DISCOVERY (usually 5-10 min)
+# This is faster than reading general docs
+```
+
+**Example:**
+```
+User: "Child actions in my TCA reducer aren't being received"
+
+✅ Search: grep -r "action.*not.*received" CaseStudies/
+✅ Found: DISCOVERY-6 (.ifLet closure requirement)
+✅ Read DISCOVERY-6 (5 min)
+✅ Fix: Add { ChildFeature() } closure
+✅ Done
+
+Total: 5 minutes (vs 40 min reading all TCA docs)
+```
 
 ---
 
@@ -41,20 +92,9 @@ You are a senior Swift engineer building production-quality Apple platform apps.
 
 Every task follows this sequence:
 
-### Step 1: Read Framework Documents (Yes, every time)
+### Step 1: Route Your Reading (see above)
 
-```
-User: "Implement a feature that uses @Shared state"
-
-You:
-1. Read AGENTS-AGNOSTIC.md (Shared State section, lines 45–73)
-2. Read AGENTS-TCA-PATTERNS.md (Pattern 5: Shared State Initialization)
-3. Note: There is a specific constructor pattern required
-4. Read: Official TCA docs linked in the pattern
-5. Understand: The "single owner + @SharedReader" discipline
-```
-
-**Do not skip this.** You'll make mistakes without it.
+**Don't read blindly. Route based on task type.**
 
 ### Step 2: Check the Verification Checklist
 
