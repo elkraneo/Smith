@@ -80,6 +80,36 @@ This document uses three enforcement levels:
 - Use suite-level traits with `.dependencies { }` for shared setup.
 - Use `expectNoDifference` for complex data comparison.
 
+#### Test Coverage Requirements
+
+- **[STANDARD] Aim for 80%+ test coverage** on TCA reducers and business logic
+  - Measure: `swift test --enable-code-coverage && xcrun llvm-cov report`
+  - Priority: Cover all action paths, state transitions, and effect handling
+  - Acceptable gaps: View rendering code, RealityKit entity setup, third-party library wrappers
+
+- **[CRITICAL] 100% coverage required for:**
+  - Public API boundaries (exposed to other modules/packages)
+  - Error handling paths (all error cases must be tested)
+  - State machine transitions (all state changes must have tests)
+  - Data transformation logic (parsers, formatters, validators)
+
+- **[STANDARD] Every bug fix must include:**
+  - Regression test that fails without the fix
+  - Test that passes with the fix
+  - Documentation in test of what bug it prevents
+
+- **[GUIDANCE] Test organization:**
+  - One test file per feature/reducer (`FeatureNameTests.swift`)
+  - Group related tests with `@Suite` annotations
+  - Use descriptive test names: `featureBehavior_condition_expectedOutcome()`
+  - Example: `loginFlow_invalidCredentials_showsErrorMessage()`
+
+- **[STANDARD] Coverage reporting:**
+  - Generate coverage after each PR: `swift test --enable-code-coverage`
+  - View report: `xcrun llvm-cov show .build/debug/MyAppPackageTests.xctest/Contents/MacOS/MyAppPackageTests -instr-profile=.build/debug/codecov/default.profdata`
+  - Fail CI if coverage drops below 75%
+  - Track coverage trends over time
+
 ### Code Style & Naming
 
 - **Indentation:** Two spaces

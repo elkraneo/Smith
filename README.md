@@ -283,9 +283,29 @@ Document major framework changes:
 
 ## Quick Links
 
+### 🚀 Getting Started (v1.1.0)
+- **⚡ Start Here:** [QUICK-START.md](QUICK-START.md) - 5-minute crash course (NEW!)
+- **📚 Learning Paths:** [LEARNING-PATHS.md](LEARNING-PATHS.md) - Choose your path: Beginner → Expert (NEW!)
+- **🔍 Framework Overview:** [Sources/AGENTS-FRAMEWORK.md](Sources/AGENTS-FRAMEWORK.md)
+
+### 📖 Core Documentation
 - **For AI Agents:** [Sources/README.md](Sources/README.md)
-- **Framework Overview:** [Sources/AGENTS-FRAMEWORK.md](Sources/AGENTS-FRAMEWORK.md)
+- **Universal Patterns:** [Sources/AGENTS-AGNOSTIC.md](Sources/AGENTS-AGNOSTIC.md)
+- **TCA Patterns:** [Sources/AGENTS-TCA-PATTERNS.md](Sources/AGENTS-TCA-PATTERNS.md)
 - **Architecture Decisions:** [Sources/AGENTS-DECISION-TREES.md](Sources/AGENTS-DECISION-TREES.md)
+
+### 🛠️ Tools & Automation (NEW!)
+- **Compliance Checker:** [Scripts/check-compliance.sh](Scripts/check-compliance.sh) - Automated violation detection
+- **Compliance Report:** [Scripts/compliance-report.sh](Scripts/compliance-report.sh) - Generate compliance score
+- **CI/CD Integration:** [CI-CD-INTEGRATION.md](CI-CD-INTEGRATION.md) - GitHub Actions, GitLab CI, pre-commit hooks
+- **Framework Sync:** [Scripts/smith-sync.sh](Scripts/smith-sync.sh)
+
+### 📋 Process & Policy (NEW!)
+- **Versioning:** [VERSIONING.md](VERSIONING.md) - Semantic versioning, migration guides
+- **Discovery Policy:** [DISCOVERY-POLICY.md](DISCOVERY-POLICY.md) - When to document patterns
+- **Evolution Log:** [EVOLUTION.md](EVOLUTION.md) - Framework history and changes
+
+### ✅ Evaluation & Submission
 - **Agent Submission:** [Sources/Tests/AGENTS-SUBMISSION-TEMPLATE.md](Sources/Tests/AGENTS-SUBMISSION-TEMPLATE.md)
 - **Agent Evaluation:** [Sources/Tests/AGENTS-EVALUATION-CHECKLIST.md](Sources/Tests/AGENTS-EVALUATION-CHECKLIST.md)
 
