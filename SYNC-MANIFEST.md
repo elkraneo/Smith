@@ -2,9 +2,9 @@
 
 This file tracks distribution of the Smith framework to projects.
 
-**Last Updated:** 2025-11-06
-**Framework Version:** v1.1+
-**Latest Sync Commit:** e85e0e3
+**Last Updated:** 2025-11-11
+**Framework Version:** v1.1.1
+**Latest Sync Commit:** 8e993bd
 **Synced Projects:** 2/2 (GreenSpurt + Scroll)
 
 ---
@@ -13,8 +13,8 @@ This file tracks distribution of the Smith framework to projects.
 
 | Project | Location | Last Sync | Smith Commit | Status |
 |---------|----------|-----------|--------------|--------|
-| GreenSpurt | `/Volumes/Plutonian/GreenSpurt` | 2025-11-06 13:36 UTC | 5a6c006 | ✅ Current |
-| Scroll | `/Volumes/Plutonian/_Developer/Scroll/source/Scroll` | 2025-11-06 13:40 UTC | e85e0e3 | ✅ Current |
+| GreenSpurt | `/Volumes/Plutonian/GreenSpurt` | 2025-11-11 01:12 UTC | 8e993bd | ✅ Current (v1.1.1) |
+| Scroll | `/Volumes/Plutonian/_Developer/Scroll/source/Scroll` | 2025-11-11 01:15 UTC | 8e993bd | ✅ Current (v1.1.1) |
 | Your Project | - | - | - | ⏳ To Be Synced |
 
 ---
@@ -42,6 +42,7 @@ Smith/
     ├── DISCOVERY-4-POPOVER-ENTITY-GAP.md
     ├── DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md
     ├── DISCOVERY-6-IFLET-CLOSURE-REQUIREMENT.md
+    ├── DISCOVERY-12-MODULE-BOUNDARY-VIOLATION.md
     └── README.md
 ```
 
