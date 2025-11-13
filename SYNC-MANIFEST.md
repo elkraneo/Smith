@@ -4,7 +4,7 @@ This file tracks distribution of the Smith framework to projects.
 
 **Last Updated:** 2025-11-13
 **Framework Version:** v1.1.1
-**Latest Sync Commit:** ee326e5 + DISCOVERY-14 corrections
+**Latest Sync Commit:** 33be8e5 + DISCOVERY-15 logging patterns
 **Synced Projects:** 3/3 (GreenSpurt + Scroll + xPLORATORIU)
 
 ---
@@ -45,6 +45,7 @@ Smith/
     ├── DISCOVERY-12-MODULE-BOUNDARY-VIOLATION.md
     ├── DISCOVERY-13-SWIFT-COMPILER-CRASHES.md
     ├── DISCOVERY-14-NESTED-REDUCER-GOTCHAS.md
+    ├── DISCOVERY-15-PRINT-OSLOG-PATTERNS.md
     └── README.md
 ```
 

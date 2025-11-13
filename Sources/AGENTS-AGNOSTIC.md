@@ -470,6 +470,218 @@ let id = UUID()
 
 ---
 
+## Logging & Observability
+
+### [STANDARD] Use OSLog Instead of print() for Production Logging
+
+**CRITICAL:** Agents consistently default to `print()` statements, creating debugging hell and production blindness.
+
+**Problem with `print()`:**
+- Synchronous, blocks main thread
+- Disappears in release builds
+- No filtering or categorization
+- No structured metadata
+- Security risks (PII exposure)
+- Memory overhead from string concatenation
+
+**Reference:** Case Study [DISCOVERY-15-PRINT-OSLOG-PATTERNS.md](../../CaseStudies/DISCOVERY-15-PRINT-OSLOG-PATTERNS.md)
+
+### Point-Free Validated Logging Pattern
+
+Based on Point-Free's `Logger.shared.log()` pattern even in test cases:
+
+```swift
+import OSLog
+
+@Reducer
+struct UserProfileFeature {
+    // ✅ Create logger with subsystem and category
+    private static let logger = Logger(
+        subsystem: "com.app.userprofile",
+        category: "UserProfileFeature"
+    )
+
+    @ObservableState
+    struct State {
+        var user: User?
+        var isLoading = false
+    }
+
+    enum Action {
+        case loadUser(userID: String)
+        case userLoaded(User)
+        case loadFailed(Error)
+    }
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+            case .loadUser(let userID):
+                // ✅ Structured logging with context
+                Self.logger.info("Loading user profile", metadata: [
+                    "userID": "\(userID)",
+                    "timestamp": "\(Date().timeIntervalSince1970)"
+                ])
+                state.isLoading = true
+                return .run { send in
+                    do {
+                        let user = try await userClient.fetch(id: userID)
+                        // ✅ Success without sensitive data
+                        Self.logger.info("User profile loaded successfully", metadata: [
+                            "userID": "\(userID)",
+                            "hasProfileImage": "\(user.profileImage != nil)"
+                        ])
+                        await send(.userLoaded(user))
+                    } catch {
+                        // ✅ Error with context, no sensitive info
+                        Self.logger.error("Failed to load user profile", metadata: [
+                            "userID": "\(userID)",
+                            "errorDomain": "\(type(of: error))",
+                            "errorCode": "\(error.localizedDescription.prefix(50))"
+                        ])
+                        await send(.loadFailed(error))
+                    }
+                }
+
+            case .userLoaded(let user):
+                Self.logger.debug("Updating UI with loaded user profile", metadata: [
+                    "userID": "\(user.id)",
+                    "updateType": "profile_loaded"
+                ])
+                state.user = user
+                state.isLoading = false
+                return .none
+
+            case .loadFailed(let error):
+                Self.logger.warning("Displaying error to user", metadata: [
+                    "errorType": "\(type(of: error))",
+                    "userFriendly": "true"
+                ])
+                state.isLoading = false
+                return .none
+            }
+        }
+    }
+}
+```
+
+### When to Use print() vs OSLog
+
+**Use `print()` ONLY for:**
+```swift
+// ❌ DEVELOPMENT ONLY - Remove before commit
+print("DEBUG: \(variableName) = \(variableValue)")  // Remove this!
+print("Placeholder: Implement actual logic here")    // Remove this!
+```
+
+**Use OSLog for:**
+```swift
+// ✅ PRODUCTION LOGGING
+logger.info("User action completed", metadata: ["action": "login"])
+logger.error("Operation failed", metadata: ["error": "\(error.localizedDescription)"])
+logger.debug("State changed", metadata: ["from": "\(oldState)", "to": "\(newState)"])
+```
+
+### Testable Logging with Dependency Injection
+
+```swift
+protocol LoggingClient {
+    func info(_ message: String, metadata: [String: String])
+    func debug(_ message: String, metadata: [String: String])
+    func warning(_ message: String, metadata: [String: String])
+    func error(_ message: String, metadata: [String: String])
+}
+
+// Production implementation
+struct OSLogClient: LoggingClient {
+    let logger: Logger
+
+    init(subsystem: String, category: String) {
+        self.logger = Logger(subsystem: subsystem, category: category)
+    }
+
+    func info(_ message: String, metadata: [String: String]) {
+        logger.info("\(message, privacy: .public)", metadata: metadata.asMetadata())
+    }
+}
+
+// Test implementation
+struct TestLogClient: LoggingClient {
+    var loggedMessages: [(level: LogLevel, message: String, metadata: [String: String])] = []
+    // ... implementation for testing
+}
+
+@Reducer
+struct LoggingExampleFeature {
+    @Dependency(\.loggingClient) var loggingClient
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+            case .increment:
+                loggingClient.debug("Incrementing value", metadata: [
+                    "currentValue": "\(state.value)",
+                    "newValue": "\(state.value + 1)"
+                ])
+                state.value += 1
+                return .none
+            }
+        }
+    }
+}
+```
+
+### Performance-Aware Logging
+
+```swift
+@Reducer
+struct HighFrequencyFeature {
+    private static let logger = Logger(subsystem: "com.app.hf", category: "HighFrequency")
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+            case .increment:
+                state.counter += 1
+
+                // ✅ Only log every 100 increments to avoid spam
+                if state.counter % 100 == 0 {
+                    Self.logger.info("Milestone reached", metadata: [
+                        "counter": "\(state.counter)",
+                        "batchSize": "100"
+                    ])
+                }
+                return .none
+            }
+        }
+    }
+}
+```
+
+### Print vs OSLog Comparison
+
+| Aspect | ❌ `print()` | ✅ `OSLog` |
+|--------|-------------|------------|
+| **Performance** | Synchronous, blocks thread | Asynchronous, optimized |
+| **Production** | Disappears in release builds | Persists with configurable levels |
+| **Filtering** | No filtering | Subsystem/category/level filtering |
+| **Context** | Just strings | Structured metadata |
+| **Security** | No privacy controls | Privacy annotations |
+| **Testing** | Hard to capture/test | Injectable dependency |
+
+### Logging Checklist
+
+Before committing logging code:
+
+- [ ] **No print() statements** in production code (remove development prints)
+- [ ] **Structured logging** with subsystem and category
+- [ ] **Metadata included** for context (avoid sensitive data)
+- [ ] **Performance considered** for high-frequency operations
+- [ ] **Testable implementation** with dependency injection
+- [ ] **Appropriate log levels** (debug, info, warning, error)
+
+---
+
 ## Access Control & Public API Boundaries
 
 ### [STANDARD] Verify Transitive Access Control Before Exposing Types

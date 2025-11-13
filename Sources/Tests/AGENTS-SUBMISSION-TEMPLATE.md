@@ -188,6 +188,17 @@ Before submitting, verify your code uses modern patterns:
 **Citation:** AGENTS-AGNOSTIC.md, lines 443–598 (Access Control & Public API Boundaries section)
 **Reference Case Study:** [DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md](../../CaseStudies/DISCOVERY-5-ACCESS-CONTROL-CASCADE-FAILURE.md)
 
+### Logging & Observability
+- [ ] No `print()` statements in production code (removed development prints)
+- [ ] Used OSLog with subsystem and category for all logging
+- [ ] Structured metadata included for context (avoided sensitive data)
+- [ ] Performance considered for high-frequency operations (log throttling)
+- [ ] Testable logging implementation with dependency injection
+- [ ] Appropriate log levels used (debug, info, warning, error)
+
+**Citation:** AGENTS-AGNOSTIC.md, lines 473–682 (Logging & Observability section)
+**Reference Case Study:** [DISCOVERY-15-PRINT-OSLOG-PATTERNS.md](../../CaseStudies/DISCOVERY-15-PRINT-OSLOG-PATTERNS.md)
+
 ### Platform-Specific (if applicable)
 - [ ] visionOS code uses `RealityView` (not `ARView`)
 - [ ] Code uses `#if os(visionOS)` guards where needed
