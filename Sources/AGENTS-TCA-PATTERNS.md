@@ -1323,6 +1323,256 @@ struct DisplayFeatureTests {
 
 ---
 
+## Pattern 6: Nested @Reducer Extraction (VALIDATED)
+
+### When to Use
+- **[CRITICAL]** ANY time you have child reducers in navigation or modal presentation
+- **[CRITICAL]** When using enum-based destinations with @Reducer
+- **[CRITICAL]** Validated against actual Point-Free TCA examples
+
+### 🚨 CRITICAL: Agent Anti-Patterns to Avoid
+
+**These patterns cause catastrophic agent failure (VALIDATED as WRONG):**
+```swift
+// ❌ AGENT OVER-ENGINEERING (WRONG)
+@Reducer
+struct ParentFeature {
+    enum Action {
+        case child(ChildFeature.Action = ChildFeature.body)  // ❌ WRONG: .body not needed
+    }
+
+    enum Destination {
+        case modal(ChildFeature.State = ChildFeature.body)  // ❌ WRONG: .body not needed
+    }
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in ... }
+        .ifLet(\.$destination, action: \.destination) {
+            Destination()  // ❌ WRONG: Closure not needed
+        }
+    }
+}
+```
+
+### Implementation: Point-Free Validated Patterns (CORRECT)
+
+```swift
+// ✅ POINT-FREE ACTUAL PATTERN (VALIDATED)
+@Reducer
+struct ParentFeature {
+    @ObservableState
+    struct State {
+        var childState: ChildFeature.State
+        var destination: Destination?
+    }
+
+    enum Action {
+        case child(ChildFeature.Action)      // ✅ SIMPLE: no .body extraction needed
+        case destination(PresentationAction<Destination.Action>)
+        case otherAction
+    }
+
+    @Reducer(state: .equatable)
+    enum Destination {
+        case modal(ChildFeature.State)      // ✅ SIMPLE: no .body extraction needed
+        case settings(SettingsFeature.State) // ✅ SIMPLE DECLARATION
+    }
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            case .otherAction:
+                return .none
+            case .destination:
+                return .none
+            }
+        }
+        Scope(state: \.childState, action: \.child) {
+            ChildFeature()
+        }
+        .ifLet(\.$destination, action: \.destination)  // ✅ SIMPLE: no closure needed
+    }
+}
+```
+
+### Navigation Stack Pattern (CORRECT)
+
+```swift
+// ✅ POINT-FREE ACTUAL PATTERN (VALIDATED)
+@Reducer
+struct SignUpFeature {
+    @Reducer
+    enum Path {
+        case basics(BasicsFeature)           // ✅ SIMPLE: no .body
+        case personalInfo(PersonalInfoFeature) // ✅ SIMPLE DECLARATION
+        case summary(SummaryFeature)
+        case topics(TopicsFeature)
+    }
+
+    @ObservableState
+    struct State {
+        var path = StackState<Path.State>()
+        @Shared var signUpData: SignUpData
+    }
+
+    enum Action {
+        case path(StackActionOf<Path>)       // ✅ SIMPLE: no .body extraction
+    }
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            case .path(.element(id: _, action: .topics(.delegate(.stepFinished)))):
+                state.path.append(.summary(SummaryFeature.State(signUpData: state.$signUpData)))
+                return .none
+            case .path:
+                return .none
+            }
+        }
+        .forEach(\.path, action: \.path)     // ✅ SIMPLE: no closure needed
+    }
+}
+```
+
+### Multiple Destinations Pattern (CORRECT)
+
+```swift
+// ✅ POINT-FREE ACTUAL PATTERN (VALIDATED)
+@Reducer
+struct MultipleDestinations {
+    @Reducer
+    enum Destination {
+        case drillDown(Counter)              // ✅ SIMPLE: no .body
+        case popover(Counter)                // ✅ SIMPLE DECLARATION
+        case sheet(Counter)
+    }
+
+    @ObservableState
+    struct State: Equatable {
+        @Presents var destination: Destination.State?
+    }
+
+    enum Action {
+        case destination(PresentationAction<Destination.Action>) // ✅ SIMPLE
+        case showDrillDown
+        case showPopover
+        case showSheet
+    }
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+            case .showDrillDown:
+                state.destination = .drillDown(Counter.State())
+                return .none
+            case .showPopover:
+                state.destination = .popover(Counter.State())
+                return .none
+            case .showSheet:
+                state.destination = .sheet(Counter.State())
+                return .none
+            case .destination:
+                return .none
+            }
+        }
+        .ifLet(\.$destination, action: \.destination)  // ✅ SIMPLE: no closure needed
+    }
+}
+```
+
+### Extension Conformance (REACTIVE, NOT PROACTIVE)
+
+```swift
+@Reducer
+struct ChildFeature {
+    @ObservableState
+    struct State {
+        var value: Int
+        var items: [String]
+    }
+
+    enum Action {
+        case load
+        case loaded([String])
+        case dismiss
+    }
+
+    var body: some Reducer<State, Action> { ... }
+}
+
+// ❌ DON'T ADD PROACTIVELY:
+// extension ChildFeature.State: Equatable {}
+// extension ChildFeature.Action: Sendable {}
+
+// ✅ ONLY ADD WHEN COMPILER COMPLAINS:
+// If you get "Type 'ChildFeature.State' does not conform to Equatable"
+// THEN add: extension ChildFeature.State: Equatable {}
+```
+
+### Agent Simplification Rules
+
+#### Rule 1: Copy Point-Free Examples Literally
+```swift
+// ✅ COPY THIS EXACT PATTERN:
+@Reducer
+enum Destination {
+    case child(ChildFeature)                // ✅ SIMPLE
+}
+
+enum Action {
+    case destination(PresentationAction<Destination.Action>) // ✅ SIMPLE
+}
+
+var body: some Reducer<State, Action> {
+    Reduce { state, action in ... }
+    .ifLet(\.$destination, action: \.destination)  // ✅ SIMPLE
+}
+```
+
+#### Rule 2: Compile First, Fix Second
+```bash
+# 1. Build first, see what actually breaks
+xcodebuild build -scheme MyScheme
+
+# 2. If it compiles: ✅ YOU'RE DONE
+# 3. If you get errors: fix ONLY what breaks
+```
+
+#### Rule 3: Extensions Only When Required
+```swift
+// ❌ DON'T ADD BY DEFAULT
+// extension MyFeature.State: Equatable {}
+
+// ✅ ONLY ADD WHEN COMPILER SAYS:
+// error: type 'MyFeature.State' does not conform to protocol 'Equatable'
+// THEN: extension MyFeature.State: Equatable {}
+```
+
+### Verification Checklist for Nested @Reducer
+
+Before committing nested @Reducer code:
+
+- [ ] **Simple enum cases**: `case child(ChildFeature.State)` (no `= .body`)
+- [ ] **Simple actions**: `case child(ChildFeature.Action)` (no `= .body`)
+- [ ] **Simple composition**: `.ifLet(\.$destination, action: \.destination)` (no closure)
+- [ ] **Extensions only when needed**: Add only if compiler complains
+- [ ] **Preview constructible**: Can create state without compilation errors
+- [ ] **Follows Point-Free examples**: Looks like official TCA examples
+
+### Agent Workflow for Nested @Reducer
+
+1. **Start with Point-Free template**: Copy the simple patterns exactly
+2. **Compile first**: See what actually breaks before adding complexity
+3. **Fix only what breaks**: Don't add extensions proactively
+4. **Test preview construction**: Verify #Preview works
+5. **Run verification checklist**: All items must pass
+
+**This prevents the catastrophic agent confidence destruction cascade by using proven Point-Free patterns that work.**
+
+**Source**: Validated against Point-Free TCA examples in `/Examples/CaseStudies/SwiftUICaseStudies/`
+
+---
+
 ## References
 
 - **TCA GitHub**: https://github.com/pointfreeco/swift-composable-architecture
@@ -1333,6 +1583,17 @@ struct DisplayFeatureTests {
 ---
 
 ## Last Updated
+
+November 13, 2025 – CORRECTED Pattern 6: Nested @Reducer Extraction (VALIDATED)
+- **CRITICAL**: Corrected nested @Reducer patterns after validating against actual Point-Free TCA examples
+- **FIXED**: Removed incorrect `= .body` syntax that doesn't exist in Point-Free patterns
+- **FIXED**: Removed unnecessary closure forms for `.ifLet` and `.forEach`
+- **FIXED**: Changed from proactive to reactive extension conformance (add only when compiler complains)
+- **VALIDATED**: All patterns now match actual Point-Free examples from `/Examples/CaseStudies/SwiftUICaseStudies/`
+- Added agent anti-patterns section showing what agents typically get wrong
+- Added simplification rules: copy Point-Free literally, compile first, fix only what breaks
+- Updated verification checklist with correct Point-Free patterns
+- Linked DISCOVERY-14 for detailed analysis of actual vs incorrect patterns
 
 November 5, 2025 – Added Pattern 5: Shared State Initialization (@Shared)
 - Documented all `@Shared` constructors and persistence strategies

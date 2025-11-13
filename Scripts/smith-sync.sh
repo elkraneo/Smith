@@ -57,7 +57,8 @@ if [ -z "$TARGET_PROJECT" ]; then
   echo ""
   echo "Examples:"
   echo "  $0 /Volumes/Plutonian/GreenSpurt"
-  echo "  $0 /Volumes/Plutonian/Scroll"
+  echo "  $0 /Volumes/Plutonian/_Developer/Scroll/source/Scroll"
+  echo "  $0 /Volumes/Plutonian/_Developer/Reality2713/xPLORATORIU/source/xPLORATORIU"
   exit 1
 fi
 

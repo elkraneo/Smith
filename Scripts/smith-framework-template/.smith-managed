@@ -1,0 +1,27 @@
+⚠️  AUTO-MANAGED BY SMITH SYNC SYSTEM
+
+This directory is automatically managed by smith-sync.sh
+https://github.com/elkraneo/Smith
+
+DO NOT:
+- Edit files directly in this directory
+- Delete or rename files
+- Move this directory
+- Commit changes to Smith/ files (they'll be overwritten)
+
+IF YOU NEED:
+- To customize patterns: Edit CLAUDE.md (root level, project-specific)
+- To link patterns: Read SMITH-FRAMEWORK-ESSENTIALS.md
+- To modify framework: Submit to Smith via DISCOVERY-SUBMISSION-TEMPLATE.md
+
+HOW THIS WORKS:
+1. Run: /path/to/Smith/Scripts/smith-sync.sh .
+2. Framework updates automatically (SOURCE OF TRUTH: Smith repo)
+3. CLAUDE.md merges intelligently if you customized it
+4. Other Smith/ files overwrite (fresh from Smith)
+
+SYNC COMMAND:
+  /path/to/Smith/Scripts/smith-sync.sh /path/to/this/project
+
+LAST SYNCED:
+  See ../.smith-sync-manifest.json for version + timestamp

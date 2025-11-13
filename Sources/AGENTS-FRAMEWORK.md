@@ -175,6 +175,8 @@ Detailed investigations of real bugs and lessons learned:
 **Current discoveries:**
 - DISCOVERY-4: Popover Entity Creation Gap (visionOS)
 - DISCOVERY-5: Access Control Cascade Failure (TCA 1.x)
+- DISCOVERY-13: Swift Compiler Crash Patterns in visionOS RealityKit Development
+- DISCOVERY-14: Nested @Reducer Macro Gotchas and Extraction Patterns
 
 **To contribute:** See [CaseStudies/README.md](../../CaseStudies/README.md) for step-by-step process.
 
