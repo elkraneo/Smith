@@ -242,6 +242,122 @@ struct WatcherAssistPopoverView: View {
 
 ---
 
+## Pattern 2.1: Conditional UI Elements (Toolbar Items, Buttons, etc.)
+
+### When to Use
+- [STANDARD] Showing/hiding UI elements based on state conditions
+- Examples: conditional toolbar buttons, conditional form fields, conditional UI sections
+- **NOT** for presenting modals, sheets, or navigation destinations
+
+### Implementation
+
+#### Conditional Toolbar Items (CORRECT)
+
+```swift
+@Reducer
+struct ListFeature {
+    @ObservableState
+    struct State {
+        var items: [Item] = []
+        var hasSelection = false
+        var canEdit = false
+    }
+
+    enum Action {
+        case selectItem(Item?)
+        case deleteSelected
+        case editSelected
+    }
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+            case .selectItem(let item):
+                state.hasSelection = item != nil
+                state.canEdit = item?.isEditable ?? false
+                return .none
+
+            case .deleteSelected:
+                // Delete logic here
+                return .none
+
+            case .editSelected:
+                // Edit logic here
+                return .none
+            }
+        }
+    }
+}
+
+struct ListView: View {
+    @Bindable var store: StoreOf<ListFeature>
+
+    var body: some View {
+        List(store.items, id: \.id, selection: $store.selection) { item in
+            Text(item.title)
+        }
+        .toolbar {
+            // ✅ CORRECT: Conditional toolbar items based on state
+            ToolbarItemGroup(placement: .bottomBar) {
+                if store.hasSelection {
+                    Button("Delete") {
+                        store.send(.deleteSelected)
+                    }
+                }
+
+                if store.canEdit {
+                    Button("Edit") {
+                        store.send(.editSelected)
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+### Key Points
+
+- **Simple `if` statements**: Use `if store.condition` for conditional UI elements
+- **No `.sheet()` or `.navigationDestination()`**: Those are for presentation state, not UI state
+- **State-driven**: UI visibility should be driven by reducer state
+- **ToolbarItemGroup**: Use for multiple conditional toolbar items
+- **Placement**: Choose appropriate toolbar placement for platform
+
+### ❌ Common Mistake: Using Presentation Modifiers for UI State
+
+```swift
+// ❌ WRONG: Using .sheet() for conditional toolbar item
+.toolbar {
+    ToolbarItem(placement: .primaryAction) {
+        .sheet(item: $store.scope(state: \.deleteButton)) { deleteStore in  // ❌ WRONG
+            Button("Delete") {
+                store.send(.deleteButtonTapped)
+            }
+        }
+    }
+}
+
+// ✅ CORRECT: Simple conditional rendering
+.toolbar {
+    ToolbarItem(placement: .primaryAction) {
+        if store.shouldShowDeleteButton {  // ✅ CORRECT
+            Button("Delete") {
+                store.send(.deleteButtonTapped)
+            }
+        }
+    }
+}
+```
+
+**Why this distinction matters:**
+- **Presentation state**: Needs lifecycle management (appearance/dismissal animations)
+- **UI state**: Simple show/hide based on boolean conditions
+- **Performance**: Presentation modifiers have overhead
+- **Correct semantics**: Different UI patterns for different purposes
+
+---
+
 ## Pattern 3: Multiple Destinations (Complex Navigation)
 
 ### When to Use
@@ -1069,7 +1185,27 @@ struct ParentView: View {
 }
 ```
 
-**Why**: SwiftUI presentation modifiers (`.sheet()`, `.navigationDestination()`, etc.) are designed for optional state. They handle lifecycle correctly (appearance, dismissal, re-setup on re-presentation). Direct if-let rendering doesn't.
+**Why**: SwiftUI presentation modifiers (`.sheet()`, `.navigationDestination()`, etc.) are designed for **presentation state** (modals, sheets, navigation destinations). They handle lifecycle correctly (appearance, dismissal, re-setup on re-presentation).
+
+**Note**: This applies to presentation state only, not conditional UI elements like toolbar items. Use simple `if` statements for conditional UI rendering:
+
+```swift
+// ✅ CORRECT: Conditional toolbar item (NOT presentation state)
+.toolbar {
+    ToolbarItem(placement: .primaryAction) {
+        if store.shouldShowDeleteButton {  // Conditional UI state
+            Button("Delete") {
+                store.send(.deleteButtonTapped)
+            }
+        }
+    }
+}
+
+// ❌ WRONG: Don't use .sheet() for conditional UI elements
+.sheet(item: $store.scope(state: \.deleteButton)) {  // This is for presentations, not UI state
+    Button("Delete") { ... }
+}
+```
 
 ---
 
@@ -1200,7 +1336,8 @@ When implementing a TCA feature, verify:
 - [ ] State is marked with `@ObservableState`
 - [ ] Views use `@Bindable var store: StoreOf<Feature>`
 - [ ] No `WithViewStore`, `IfLetStore`, or `@Perception.Bindable` in code
-- [ ] Optional state uses `.sheet(item:)` or `.navigationDestination(item:)` with `.scope()`
+- [ ] Optional presentation state uses `.sheet(item:)` or `.navigationDestination(item:)` with `.scope()`
+- [ ] Conditional UI elements use simple `if` statements (not presentation modifiers)
 - [ ] No manual host bridges or conditionals for optional state
 - [ ] No `.onReceive()` for state observation
 - [ ] Dispatch is via `store.send(.action)` directly in closures
