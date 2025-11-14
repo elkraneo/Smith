@@ -42,6 +42,27 @@ This document defines principles and patterns that apply **across all Apple plat
 - Does a simple fix exist?
 - Would this code work with basic Swift syntax?
 
+### **🚫 ANTI-PATTERN: Principles as Excuses**
+**Smith principles GUIDE efficient delivery, they don't ABANDON user value.**
+
+**Never use Smith principles to justify NOT implementing the user's request:**
+- ❌ "I can't implement this feature because of Smith principle X"
+- ❌ "The current TCA version has issues, so I'll skip the feature"
+- ❌ "This is over-engineering, so I won't implement it"
+- ❌ "Smith framework says to keep it simple, so no feature for you"
+
+**✅ Correct Smith Pattern Application:**
+```
+User: "Add folder selection feature"
+❌ Wrong: "@ReducerBuilder has issues, so no folder selection"
+✅ Right: "@ReducerBuilder has issues, let me find a simpler pattern that works"
+✅ Alternative: "Use modal view with @StateObject instead of @ObservableState"
+✅ Alternative: "Implement as separate, simpler component outside complex TCA"
+✅ Alternative: "Ask user: (A) simple modal now, or (B) wait for TCA update?"
+```
+
+**Smith Framework Goal:** Deliver user value efficiently, not avoid work entirely.
+
 ---
 
 ## Role & Persona
