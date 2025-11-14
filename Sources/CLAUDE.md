@@ -40,7 +40,31 @@ Look at the user's request and identify:
 
 **Full routing logic:** See [AGENT-ROUTING.md](../AGENT-ROUTING.md) for complete decision tree.
 
-### Step 3: Start Minimal, Expand Only If Needed
+### Step 0: Check Smith Agent Skill Availability (Before Any Reading)
+
+**CRITICAL:** Check if the Smith Agent Skill is available before reading documentation.
+
+```bash
+# If Smith Agent Skill is available, use it first:
+# Smith skill auto-activates on TCA/Swift keywords
+# Provides syntax-first validation, reading budgets, scripts
+
+# If Smith skill doesn't auto-activate, explicitly request:
+"Use the Smith skill to help with this TCA pattern"
+```
+
+**Smith Agent Skill triggers:**
+- ✅ "TCA", "@Reducer", "@ObservableState", "@Shared"
+- ✅ "Swift Composable Architecture", "WithViewStore"
+- ✅ "SwiftUI navigation", ".sheet", ".scope"
+- ✅ "compilation errors", "syntax errors"
+- ✅ "Smith framework", "AGENTS documentation"
+
+**If Smith skill is NOT available:**
+- Fall back to Step 1 (task classification)
+- Read documentation as outlined below
+
+### Step 1: Classify the Task (30 seconds)
 
 ```
 User: "Add a boolean flag 'isLoading' to LoginFeature state"

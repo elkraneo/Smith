@@ -4,6 +4,23 @@ This document defines principles and patterns that apply **across all Apple plat
 
 ---
 
+## 🚨 **CRITICAL: Check Smith Agent Skill First**
+
+**Before reading any documentation, check if the Smith Agent Skill is available.**
+
+### **Smith Agent Skill Priority:**
+1. **Check for auto-activation** on TCA/Swift keywords
+2. **If not auto-activated, explicitly request:** "Use the Smith skill for this"
+3. **Use Smith skill scripts** for validation and pattern checking
+4. **Fall back to documentation** only if skill is unavailable
+
+### **Smith Skill Provides:**
+- ✅ Syntax-first validation (swiftc compilation)
+- ✅ Reading budgets (prevents over-engineering)
+- ✅ Anti-pattern detection (WithViewStore, wrong @Shared)
+- ✅ Code recipes and step-by-step guidance
+- ✅ Executable validation scripts
+
 ## 🚨 **CRITICAL: Syntax Before Patterns**
 
 **Smith's #1 Rule: Fix compilation errors before applying patterns.**
