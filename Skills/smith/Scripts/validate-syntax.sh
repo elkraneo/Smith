@@ -8,31 +8,26 @@ set -e
 echo "🔍 Smith Framework: Syntax Validation"
 echo "=================================="
 
-# Check if we're in a Swift project
-if [[ ! -f "Package.swift" && ! -f "*.xcodeproj/project.pbxproj" ]]; then
-    echo "❌ Error: Not in a Swift project directory"
-    echo "Expected: Package.swift or *.xcodeproj"
-    exit 1
-fi
-
-# Find Swift source files
-if [[ -f "Package.swift" ]]; then
-    # Swift Package Manager
-    echo "📦 Swift Package Manager detected"
-    SOURCES=$(find Sources -name "*.swift" -type f 2>/dev/null || true)
-elif [[ -d "*.xcodeproj" ]]; then
-    # Xcode project
-    echo "🏗️ Xcode project detected"
-    SOURCES=$(find . -name "*.swift" -type f -not -path "./Build/*" 2>/dev/null || true)
-else
-    echo "⚠️ No Swift sources found, checking current directory"
-    SOURCES=$(find . -name "*.swift" -maxdepth 2 -type f 2>/dev/null || true)
-fi
+# Find Swift source files first
+SOURCES=$(find . -name "*.swift" -type f -not -path "./Build/*" -not -path "./DerivedData/*" 2>/dev/null || true)
 
 if [[ -z "$SOURCES" ]]; then
     echo "❌ No Swift source files found"
+    echo "Current directory: $(pwd)"
+    echo "Looking for .swift files..."
+    find . -name "*.swift" -type f 2>/dev/null | head -5 || echo "No .swift files found anywhere"
     exit 1
 fi
+
+# Detect project type
+if [[ -f "Package.swift" ]]; then
+    echo "📦 Swift Package Manager detected"
+elif [[ -n "$(find . -maxdepth 1 -name "*.xcodeproj" -type d)" ]]; then
+    echo "🏗️ Xcode project detected"
+else
+    echo "📝 Swift files found in current directory"
+fi
+
 
 echo "📝 Found Swift files:"
 echo "$SOURCES" | head -10
