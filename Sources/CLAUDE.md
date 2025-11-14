@@ -92,11 +92,32 @@ Total: 5 minutes (vs 40 min reading all TCA docs)
 
 Every task follows this sequence:
 
+### Step 0: **Check Compilation First (CRITICAL)**
+
+**Before reading ANY Smith documentation:**
+
+```bash
+# 1. Does the code compile?
+swift build || swiftc -typecheck Sources/**/*.swift
+
+# 2. If NO: Fix compilation errors ONLY
+# 3. Read Smith docs ONLY after code compiles
+```
+
 ### Step 1: Route Your Reading (see above)
 
 **Don't read blindly. Route based on task type.**
 
-### Step 2: Check the Verification Checklist
+### Step 2: **Check Reading Budget**
+```bash
+# Simple syntax fix: 0-5 minutes max reading
+# Small feature: 15 minutes max reading
+# Complex task: 30 minutes max reading
+
+# If over budget: STOP and ask "Is this over-engineering?"
+```
+
+### Step 3: Check the Verification Checklist
 
 Every AGENTS document ends with a verification checklist. Before you write anything, review it:
 
@@ -106,7 +127,7 @@ Every AGENTS document ends with a verification checklist. Before you write anyth
 
 If you can't answer these, read the section again.
 
-### Step 3: Use TodoWrite to Track Your Work
+### Step 4: Use TodoWrite to Track Your Work
 
 Break the task into steps using TodoWrite. This ensures:
 - You're tracking progress
@@ -114,11 +135,11 @@ Break the task into steps using TodoWrite. This ensures:
 - The user can see your work
 - You're marking tasks complete as you finish them
 
-### Step 4: Implement Against the Checklist
+### Step 5: Implement Against the Checklist
 
 Write code that will pass the verification checklist. Not "eventually after debugging," but by design.
 
-### Step 5: Verify Before Committing
+### Step 6: Verify Before Committing
 
 Run through the checklist one more time. If any item fails:
 - Don't commit

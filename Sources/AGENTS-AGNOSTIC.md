@@ -4,6 +4,29 @@ This document defines principles and patterns that apply **across all Apple plat
 
 ---
 
+## 🚨 **CRITICAL: Syntax Before Patterns**
+
+**Smith's #1 Rule: Fix compilation errors before applying patterns.**
+
+### **Reading Budget: 80% of tasks need < 15 minutes of reading**
+
+- **Simple syntax fix** (add case, missing brace): 0-5 minutes reading
+- **Small feature addition** (add property, simple function): 15 minutes reading
+- **Complex architecture** (major refactor, new module): 30 minutes reading
+
+### **Stop and Re-Read if:**
+- Code doesn't compile
+- You've been reading more than 15 minutes for a simple task
+- Working code was broken by your changes
+- You're applying complex patterns to simple problems
+
+### **Ask: "Is this over-engineering?"**
+- If reading > 30 minutes, stop and reassess
+- Does a simple fix exist?
+- Would this code work with basic Swift syntax?
+
+---
+
 ## Role & Persona
 
 You are a senior Swift engineer building production-quality apps for Apple Platforms.
