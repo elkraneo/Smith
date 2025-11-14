@@ -1,0 +1,89 @@
+# Smith Framework Skill Trigger Phrases
+# These phrases and patterns cause Claude to automatically load the Smith skill
+
+## Primary TCA Patterns
+ComposableArchitecture
+TCA reducer
+@Reducer
+@ObservableState
+@Shared
+WithViewStore
+@Bindable
+ViewStore
+
+## Smith Framework References
+Smith framework
+AGENTS documentation
+DISCOVERY-
+QUICK-START
+CLAUDE.md
+
+## Swift Patterns Needing Smith Guidance
+SwiftUI navigation
+.sheet
+.scope
+State management
+Dependency injection
+@DependencyClient
+
+## Problem Indicators
+reducer not compiling
+action not received
+TCA error
+child features
+nested reducer
+@Reducer extension
+
+## File Patterns
+*Feature.swift
+*Reducer.swift
+import ComposableArchitecture
+
+## Common Anti-Patterns
+@State in reducer
+Shared(value:
+Task.detached
+Date() direct call
+@Perception.Bindable
+
+## Architecture Questions
+should I use
+which approach
+architecture decision
+pattern choice
+
+## Testing Patterns
+Swift Testing
+@Test
+TestClock
+@MainActor test
+TCA testing
+
+## Platform-Specific
+visionOS
+RealityView
+PresentationComponent
+Model3D
+Entity
+
+## Compilation Issues
+compilation error
+type mismatch
+deprecated API
+swift build error
+swiftc error
+
+## Concurrency Patterns
+Task { @MainActor
+async/await
+MainActor
+concurrency
+race condition
+
+## Access Control
+public API
+access control
+internal
+private
+fileprivate
+transitive dependencies

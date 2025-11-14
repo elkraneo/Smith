@@ -1,0 +1,83 @@
+{
+  "reading_budgets": {
+    "version": "1.1.1",
+    "description": "Smith Framework reading budgets to prevent over-engineering",
+    "principle": "80% of tasks should need < 15 minutes of reading",
+    "budgets": {
+      "syntax_fix": {
+        "max_time": "5 minutes",
+        "description": "Simple syntax fixes (compilation errors)",
+        "route": "swiftc -typecheck first"
+      },
+      "testing": {
+        "max_time": "15 minutes",
+        "description": "Testing patterns and Swift Testing framework",
+        "primary": "QUICK-START.md Rules 6-7",
+        "fallback": "AGENTS-AGNOSTIC.md lines 75-111"
+      },
+      "tca_reducer": {
+        "max_time": "15 minutes",
+        "description": "TCA reducer patterns and state management",
+        "primary": "QUICK-START.md Rules 2-4",
+        "fallback": "AGENTS-TCA-PATTERNS.md specific pattern"
+      },
+      "visionos_entities": {
+        "max_time": "10 minutes",
+        "description": "visionOS entities and 3D components",
+        "primary": "QUICK-START.md Rule 9",
+        "fallback": "PLATFORM-VISIONOS.md + DISCOVERY-4"
+      },
+      "dependencies": {
+        "max_time": "10 minutes",
+        "description": "Dependency injection patterns",
+        "primary": "QUICK-START.md Rule 5",
+        "fallback": "AGENTS-DECISION-TREES.md Tree 2"
+      },
+      "access_control_error": {
+        "max_time": "20 minutes",
+        "description": "Access control cascade failures",
+        "primary": "QUICK-START.md Rule 8 + DISCOVERY-5",
+        "fallback": "AGENTS-AGNOSTIC.md lines 443-598"
+      },
+      "architecture_decision": {
+        "max_time": "25 minutes",
+        "description": "Architecture decisions and pattern selection",
+        "primary": "AGENTS-DECISION-TREES.md relevant tree",
+        "fallback": "AGENTS-TASK-SCOPE.md"
+      },
+      "bug_fix": {
+        "max_time": "15 minutes",
+        "description": "Bug resolution and error fixing",
+        "primary": "Search CaseStudies/ for symptom",
+        "fallback": "Read matching DISCOVERY"
+      }
+    },
+    "stop_conditions": {
+      "over_budget": {
+        "trigger": "Reading time exceeds budget",
+        "action": "STOP and ask 'Is this over-engineering?'",
+        "message": "Simple solution should be implemented faster"
+      },
+      "analysis_paralysis": {
+        "trigger": "Reading multiple full documents",
+        "action": "STOP and use reading router",
+        "message": "Target specific sections, not entire documents"
+      },
+      "tool_availability": {
+        "trigger": "Manual analysis when automation exists",
+        "action": "STOP and use Scripts/",
+        "message": "Leverage validation scripts for consistency"
+      }
+    },
+    "efficiency_metrics": {
+      "target_ratio": "45:1",
+      "description": "Reduce 90-minute documentation marathons to 2-minute fixes",
+      "success_indicators": [
+        "Tasks complete within reading budgets",
+        "Compilation errors fixed first",
+        "Pattern validation passes checklists",
+        "No over-engineering detected"
+      ]
+    }
+  }
+}

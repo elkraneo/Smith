@@ -1,0 +1,75 @@
+name: smith
+title: Smith Framework
+description: Swift Composable Architecture patterns and modern iOS development framework. Prevents over-engineering with syntax-first validation, reading budgets, and Point-Free validated TCA patterns.
+version: 1.1.1
+author: Smith Framework Team
+
+# Auto-detection patterns - Claude loads this skill when these are detected
+triggers:
+  # Primary TCA patterns
+  - "ComposableArchitecture"
+  - "TCA reducer"
+  - "@Reducer"
+  - "@ObservableState"
+  - "@Shared"
+  - "WithViewStore"
+  - "@Bindable"
+  - "ViewStore"
+
+  # Smith framework references
+  - "Smith framework"
+  - "AGENTS documentation"
+  - "DISCOVERY-"
+
+  # Swift patterns that benefit from Smith
+  - "SwiftUI navigation"
+  - ".sheet"
+  - ".scope"
+  - "State management"
+  - "Dependency injection"
+  - "@DependencyClient"
+
+  # Problem indicators
+  - "reducer not compiling"
+  - "action not received"
+  - "TCA error"
+  - "child features"
+
+  # File patterns
+  - "*Feature.swift"
+  - "*Reducer.swift"
+  - "import ComposableArchitecture"
+
+# Files to load when skill activates
+files:
+  - instructions.md
+  - QUICK-START.md
+  - AGENTS-AGNOSTIC.md
+  - AGENTS-TCA-PATTERNS.md
+  - AGENTS-DECISION-TREES.md
+  - CLAUDE.md
+  - README.md
+
+# Case studies for specific problems
+case_studies:
+  - DISCOVERY-13-SWIFT-COMPILER-CRASHES.md
+  - DISCOVERY-14-NESTED-REDUCER-GOTCHAS.md
+  - DISCOVERY-15-PRINT-OSLOG-PATTERNS.md
+
+# Platform-specific documentation
+platform_docs:
+  - PLATFORM-VISIONOS.md
+  - PLATFORM-IOS.md
+  - PLATFORM-MACOS.md
+
+# Scripts for validation
+scripts:
+  - Scripts/validate-syntax.sh
+  - Scripts/check-tca-patterns.js
+  - Scripts/reading-router.js
+
+# Resources
+resources:
+  - Resources/smith-rules.json
+  - Resources/trigger-phrases.txt
+  - Resources/reading-budgets.json

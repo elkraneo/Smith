@@ -1,0 +1,108 @@
+{
+  "smith": {
+    "version": "1.1.1",
+    "description": "Swift Composable Architecture patterns for Smith Framework",
+    "rules": [
+      {
+        "name": "syntax-first",
+        "description": "Always check compilation before pattern application",
+        "script": "Scripts/validate-syntax.sh",
+        "error": "Fix syntax errors before applying Smith patterns"
+      },
+      {
+        "name": "no-withviewstore",
+        "description": "WithViewStore is deprecated, use @Bindable",
+        "pattern": "WithViewStore",
+        "severity": "error",
+        "message": "Replace WithViewStore with @Bindable",
+        "reference": "AGENTS-TCA-PATTERNS.md Mistake 1"
+      },
+      {
+        "name": "no-perception-bindable",
+        "description": "@Perception.Bindable is deprecated, use TCA @Bindable",
+        "pattern": "@Perception\\.Bindable",
+        "severity": "error",
+        "message": "Replace @Perception.Bindable with @Bindable",
+        "reference": "AGENTS-TCA-PATTERNS.md Quick Reference"
+      },
+      {
+        "name": "no-shared-wrong-constructor",
+        "description": "Shared(value:) is wrong, use Shared(wrappedValue:)",
+        "pattern": "Shared\\(",
+        "severity": "error",
+        "message": "Use Shared(wrappedValue:) constructor",
+        "reference": "AGENTS-TCA-PATTERNS.md Pattern 5, Mistake 5"
+      },
+      {
+        "name": "no-task-detached",
+        "description": "Task.detached is discouraged",
+        "pattern": "Task\\.detached",
+        "severity": "warning",
+        "message": "Use Task { @MainActor in } instead",
+        "reference": "AGENTS-AGNOSTIC.md lines 28"
+      },
+      {
+        "name": "no-direct-date-calls",
+        "description": "Direct Date() calls should use dependencies",
+        "pattern": "Date\\(\\)",
+        "severity": "warning",
+        "message": "Use Date() through dependencies",
+        "reference": "AGENTS-AGNOSTIC.md lines 419-440"
+      },
+      {
+        "name": "no-state-in-reducer",
+        "description": "@State should not be used in TCA reducers",
+        "pattern": "@State.*var.*State",
+        "severity": "error",
+        "message": "Use @ObservableState instead of @State",
+        "reference": "AGENTS-AGNOSTIC.md lines 24-29"
+      },
+      {
+        "name": "reading-budget",
+        "description": "Enforce reading budgets to prevent over-engineering",
+        "script": "Scripts/reading-router.js",
+        "budget": {
+          "simple": "5 minutes",
+          "feature": "15 minutes",
+          "complex": "30 minutes"
+        }
+      }
+    ],
+    "positive_patterns": [
+      {
+        "name": "modern-reducer",
+        "description": "Using modern @Reducer macro",
+        "pattern": "@Reducer",
+        "type": "positive"
+      },
+      {
+        "name": "observable-state",
+        "description": "Using @ObservableState for state",
+        "pattern": "@ObservableState",
+        "type": "positive"
+      },
+      {
+        "name": "bindable",
+        "description": "Using @Bindable for view bindings",
+        "pattern": "@Bindable",
+        "type": "positive"
+      },
+      {
+        "name": "dependency-client",
+        "description": "Using @DependencyClient for dependencies",
+        "pattern": "@DependencyClient",
+        "type": "positive"
+      }
+    ]
+  },
+  "swift_format": {
+    "version": "508.0.1",
+    "indentation": 4,
+    "line_ending": "lf",
+    "maximum_blank_lines": 1,
+    "respects_existing_line_breaks": true,
+    "spaces_around_range_operators": false,
+    "blank_line_between_members": true,
+    "no_assignment_in_expression": false
+  }
+}
