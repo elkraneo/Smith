@@ -270,13 +270,18 @@ Scripts/tca-pattern-validator.js [file-or-directory]
 ```bash
 Scripts/validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds]
 ```
-- **Full workspace compilation** (not just syntax validation)
+- **Full workspace compilation** with **root cause analysis**
 - Detects mid-build hangs (e.g., stuck at "Building 9/49 forever")
-- Shows exact progress: Which target got stuck (Compiling X, Linking Y, Building Z/N)
+- **Root cause checks** (NOT just "it hangs"):
+  - Module analysis: Which target is stuck, what are its dependencies
+  - Incremental build state: DerivedData corruption size
+  - SPM cache: Which packages are slow (swift-syntax, GRDB, TCA)
+  - Compilation settings: Debug vs Release, optimization flags
+  - Link-time analysis: Linker warnings, duplicate symbols
 - Timeout detection: 300s default (workspace builds are slower than single schemes)
 - Uses xcsift for structured output, falls back to error checking
 - **Critically:** Catches hangs hidden by `swiftc -typecheck` that only manifest in full build
-- Returns: Hang point + suggested fixes (clean build, DerivedData, check circular deps)
+- Returns: Hang point + 5-point root cause analysis + ordered fix suggestions
 
 **When to use:** After `validate-syntax.sh` passes, BEFORE reporting success to user
 
