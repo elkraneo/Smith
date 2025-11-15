@@ -89,10 +89,31 @@ if [ $EXIT_CODE -eq 124 ]; then
 
     # Check 2: Incremental build state (is DerivedData corrupted?)
     echo "   2️⃣ Incremental Build State:"
-    DERIVED_DATA_SIZE=$(du -sh ~/Library/Developer/Xcode/DerivedData/Scroll* 2>/dev/null | awk '{print $1}')
-    if [ -n "$DERIVED_DATA_SIZE" ]; then
+
+    # Find ACTUAL build location (not assumed ~/Library)
+    BUILD_DIR=$(xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | grep "BUILD_DIR = " | head -1 | awk '{print $3}')
+
+    if [ -n "$BUILD_DIR" ]; then
+        DERIVED_DATA_ROOT=$(dirname "$BUILD_DIR")
+        DERIVED_DATA_SIZE=$(du -sh "$DERIVED_DATA_ROOT" 2>/dev/null | awk '{print $1}')
+
+        echo "      Actual location: $DERIVED_DATA_ROOT"
         echo "      DerivedData size: $DERIVED_DATA_SIZE"
-        echo "      💡 Try: rm -rf ~/Library/Developer/Xcode/DerivedData/Scroll*"
+
+        # Check for multiple stale Scroll folders (sign of incomplete cleanup)
+        SCROLL_FOLDERS=$(find "$DERIVED_DATA_ROOT" -maxdepth 1 -type d -name "Scroll-*" 2>/dev/null | wc -l)
+        if [ "$SCROLL_FOLDERS" -gt 1 ]; then
+            echo "      ⚠️  WARNING: $SCROLL_FOLDERS Scroll folders (stale duplicates!)"
+        fi
+
+        echo "      💡 Try: rm -rf '$DERIVED_DATA_ROOT'/Scroll-*"
+    else
+        # Fallback to standard location
+        DERIVED_DATA_SIZE=$(du -sh ~/Library/Developer/Xcode/DerivedData/Scroll* 2>/dev/null | awk '{print $1}')
+        if [ -n "$DERIVED_DATA_SIZE" ]; then
+            echo "      DerivedData size: $DERIVED_DATA_SIZE"
+            echo "      💡 Try: rm -rf ~/Library/Developer/Xcode/DerivedData/Scroll*"
+        fi
     fi
     echo ""
 
@@ -128,8 +149,12 @@ if [ $EXIT_CODE -eq 124 ]; then
     echo ""
     echo "🛠️ SUGGESTED FIXES (in order of likelihood):"
     echo ""
-    echo "1. Clean incremental state:"
-    echo "   rm -rf ~/Library/Developer/Xcode/DerivedData/Scroll*"
+    echo "1. Clean incremental state (CRITICAL - check DerivedData location first):"
+    if [ -n "$BUILD_DIR" ]; then
+        echo "   rm -rf '$DERIVED_DATA_ROOT'/Scroll-*"
+    else
+        echo "   rm -rf ~/Library/Developer/Xcode/DerivedData/Scroll*"
+    fi
     echo "   xcodebuild clean -workspace '$WORKSPACE' -scheme '$SCHEME'"
     echo ""
     echo "2. Check for circular module dependencies:"
