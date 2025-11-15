@@ -268,20 +268,23 @@ Scripts/tca-pattern-validator.js [file-or-directory]
 
 ### Deep Compilation Validation
 ```bash
-Scripts/validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds]
+Scripts/validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds] [--verbose]
 ```
-- **Full workspace compilation** with **root cause analysis**
+- **Full workspace compilation** with **root cause analysis** - Context-efficient version
+- **Smart early-exit detection:** Checks DerivedData size first (>500MB = corruption alert, exits immediately)
 - Detects mid-build hangs (e.g., stuck at "Building 9/49 forever")
-- **Root cause checks** (NOT just "it hangs"):
+- **Primary diagnostic:** Index store corruption (most common cause of Xcode hangs)
+- **Root cause analysis** (triggered with `--verbose` flag):
   - Module analysis: Which target is stuck, what are its dependencies
-  - Incremental build state: DerivedData corruption size
   - SPM cache: Which packages are slow (swift-syntax, GRDB, TCA)
-  - Compilation settings: Debug vs Release, optimization flags
-  - Link-time analysis: Linker warnings, duplicate symbols
 - Timeout detection: 300s default (workspace builds are slower than single schemes)
-- Uses xcsift for structured output, falls back to error checking
+- **Context-efficient output:** Uses xcsift for structured JSON, not raw logs
+- **Sequential execution:** No parallel processes (previous context drain fixed)
 - **Critically:** Catches hangs hidden by `swiftc -typecheck` that only manifest in full build
-- Returns: Hang point + 5-point root cause analysis + ordered fix suggestions
+- Returns: Hang point + actionable fixes + optional verbose diagnostics
+
+**Normal mode (default):** Fast, focused output on index corruption
+**Verbose mode:** `./validate-compilation-deep.sh . Scroll 300 --verbose` for detailed module analysis
 
 **When to use:** After `validate-syntax.sh` passes, BEFORE reporting success to user
 

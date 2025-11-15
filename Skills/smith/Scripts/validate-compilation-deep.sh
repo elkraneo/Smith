@@ -1,18 +1,22 @@
 #!/bin/bash
 
-# Deep Compilation Validation with Root Cause Analysis
-# Detects hangs (Building X/Y forever) AND analyzes WHY
-# Usage: ./validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds]
+# Deep Compilation Validation - Context-Efficient Version
+# Detects hangs with root cause analysis
+# Usage: ./validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds] [--verbose]
 
 WORKSPACE="${1:-.}"
 SCHEME="${2:-Scroll}"
 TIMEOUT="${3:-300}"
+VERBOSE_MODE="${4:-}"
 
-echo "🔍 Deep Compilation Validation (Hang Detection + Root Cause Analysis)"
-echo "===================================================================="
+echo "🔍 Deep Compilation Validation (Context-Efficient)"
+echo "=================================================="
 echo "Workspace: $WORKSPACE"
 echo "Scheme: $SCHEME"
 echo "Timeout: ${TIMEOUT}s"
+if [ "$VERBOSE_MODE" = "--verbose" ]; then
+    echo "Mode: VERBOSE (detailed diagnostics enabled)"
+fi
 echo ""
 
 # Check dependencies
@@ -21,8 +25,40 @@ if ! command -v xcsift &> /dev/null; then
     exit 1
 fi
 
-# Step 1: Quick typecheck baseline
-echo "1️⃣ Typecheck validation..."
+# EARLY EXIT CHECK: Index store corruption (BEFORE compilation attempt)
+echo "1️⃣ Checking index store health..."
+BUILD_DIR=$(xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | grep "BUILD_DIR = " | head -1 | awk '{print $3}')
+
+if [ -n "$BUILD_DIR" ]; then
+    DERIVED_DATA_ROOT=$(dirname "$BUILD_DIR")
+    DERIVED_DATA_SIZE_RAW=$(du -sh "$DERIVED_DATA_ROOT" 2>/dev/null | awk '{print $1}')
+    DERIVED_DATA_SIZE_MB=$(du -sm "$DERIVED_DATA_ROOT" 2>/dev/null | awk '{print $1}')
+
+    # CRITICAL: Index store > 500MB indicates corruption
+    if [ "$DERIVED_DATA_SIZE_MB" -gt 500 ]; then
+        echo "⚠️  CRITICAL: DerivedData size is ${DERIVED_DATA_SIZE_RAW} (${DERIVED_DATA_SIZE_MB}MB)"
+        echo "   This indicates index corruption (normal: <300MB)"
+        echo ""
+        echo "🛠️ IMMEDIATE FIX:"
+        echo "   1. killall Xcode"
+        echo "   2. rm -rf '$DERIVED_DATA_ROOT'/Scroll-*"
+        echo "   3. rm -rf ~/Library/Caches/com.apple.dt.Xcode"
+        echo "   4. xcodebuild clean -workspace '$WORKSPACE' -scheme '$SCHEME'"
+        echo "   5. Reopen Xcode and wait for reindexing to complete"
+        echo ""
+        echo "⏱️ Reindexing typically takes 5-15 minutes. Monitor Activity Monitor → Xcode."
+        echo ""
+        exit 1
+    else
+        echo "✅ DerivedData size: ${DERIVED_DATA_SIZE_RAW} (healthy)"
+    fi
+else
+    echo "⚠️  Could not determine DerivedData location"
+fi
+echo ""
+
+# Step 1: Typecheck validation
+echo "2️⃣ Typecheck validation..."
 TYPECHECK_ERRORS=$(find Sources -name "*.swift" -type f 2>/dev/null | xargs swiftc -typecheck 2>&1 | grep -c "error:" || true)
 
 if [ "$TYPECHECK_ERRORS" -gt 0 ]; then
@@ -31,125 +67,63 @@ if [ "$TYPECHECK_ERRORS" -gt 0 ]; then
 else
     echo "✅ Typecheck passed"
 fi
-
-# Step 2: Full workspace build with hang detection
-echo ""
-echo "2️⃣ Full build validation (${TIMEOUT}s timeout)..."
 echo ""
 
-BUILD_LOG="/tmp/smith-build-$$.log"
-PROGRESS_LOG="/tmp/smith-progress-$$.log"
+# Step 2: Full build with xcsift output (structured, minimal context)
+echo "3️⃣ Full build validation (${TIMEOUT}s timeout)..."
+echo ""
 
-# Run build and capture both full output and progress
-{
-    timeout "$TIMEOUT" xcodebuild build \
-        -workspace "$WORKSPACE" \
-        -scheme "$SCHEME" \
-        -configuration Debug \
-        -Onone \
-        -derivedDataPath /tmp/smith-build-$$ \
-        2>&1
-} | tee "$BUILD_LOG" | grep -E "Building |Compiling |Linking |error:|fatal error:" | tee "$PROGRESS_LOG"
+TEMP_LOG="/tmp/smith-build-$$.log"
+timeout "$TIMEOUT" xcodebuild build \
+    -workspace "$WORKSPACE" \
+    -scheme "$SCHEME" \
+    -configuration Debug \
+    -Onone \
+    -derivedDataPath "/tmp/smith-build-$$" \
+    2>&1 > "$TEMP_LOG"
 
 EXIT_CODE=$?
 
-echo ""
-
-# Step 3: Analyze hang vs. success
+# Step 3: Analyze with xcsift (structured output only)
 if [ $EXIT_CODE -eq 124 ]; then
     echo "================================================="
     echo "❌ COMPILATION HUNG (timeout after ${TIMEOUT}s)"
     echo ""
-
-    # Show hang point
-    LAST_BUILD=$(grep -oE 'Building [0-9]+/[0-9]+' "$PROGRESS_LOG" | tail -1)
-    LAST_STEP=$(grep -E "Compiling |Building " "$PROGRESS_LOG" | tail -1)
-
-    echo "📍 Hang Point:"
-    echo "   Step: $LAST_BUILD"
-    if [ -n "$LAST_STEP" ]; then
-        echo "   Last: $LAST_STEP"
-    fi
-    echo ""
-
-    # ROOT CAUSE ANALYSIS
     echo "🔬 ROOT CAUSE ANALYSIS:"
     echo ""
 
-    # Check 1: Module dependency graph (what module is stuck?)
-    echo "   1️⃣ Module Analysis:"
-    if command -v swift &> /dev/null; then
-        STUCK_TARGET=$(echo "$LAST_STEP" | grep -oE "Compiling [^ ]+" | head -1 | cut -d' ' -f2)
+    # Only show last 5 build lines from log
+    LAST_STEPS=$(grep -E "Building |Compiling " "$TEMP_LOG" | tail -5)
+    if [ -n "$LAST_STEPS" ]; then
+        echo "📍 Last compilation steps:"
+        echo "$LAST_STEPS" | sed 's/^/   /'
+        echo ""
+    fi
+
+    # Check for verbose diagnostics if requested
+    if [ "$VERBOSE_MODE" = "--verbose" ]; then
+        echo "🔬 VERBOSE DIAGNOSTICS:"
+        echo ""
+
+        # Module analysis
+        STUCK_TARGET=$(grep -oE "Compiling [^ ]+" "$TEMP_LOG" | tail -1 | cut -d' ' -f2)
         if [ -n "$STUCK_TARGET" ]; then
-            echo "      Stuck module: $STUCK_TARGET"
-            echo "      💡 Check dependencies for: circular imports, missing public types"
-        fi
-    fi
-    echo ""
-
-    # Check 2: Incremental build state (is DerivedData corrupted?)
-    echo "   2️⃣ Incremental Build State:"
-
-    # Find ACTUAL build location (not assumed ~/Library)
-    BUILD_DIR=$(xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -showBuildSettings 2>/dev/null | grep "BUILD_DIR = " | head -1 | awk '{print $3}')
-
-    if [ -n "$BUILD_DIR" ]; then
-        DERIVED_DATA_ROOT=$(dirname "$BUILD_DIR")
-        DERIVED_DATA_SIZE=$(du -sh "$DERIVED_DATA_ROOT" 2>/dev/null | awk '{print $1}')
-
-        echo "      Actual location: $DERIVED_DATA_ROOT"
-        echo "      DerivedData size: $DERIVED_DATA_SIZE"
-
-        # Check for multiple stale Scroll folders (sign of incomplete cleanup)
-        SCROLL_FOLDERS=$(find "$DERIVED_DATA_ROOT" -maxdepth 1 -type d -name "Scroll-*" 2>/dev/null | wc -l)
-        if [ "$SCROLL_FOLDERS" -gt 1 ]; then
-            echo "      ⚠️  WARNING: $SCROLL_FOLDERS Scroll folders (stale duplicates!)"
+            echo "   Stuck module: $STUCK_TARGET"
+            echo "   💡 Check: circular imports, missing public types"
+            echo ""
         fi
 
-        echo "      💡 Try: rm -rf '$DERIVED_DATA_ROOT'/Scroll-*"
-    else
-        # Fallback to standard location
-        DERIVED_DATA_SIZE=$(du -sh ~/Library/Developer/Xcode/DerivedData/Scroll* 2>/dev/null | awk '{print $1}')
-        if [ -n "$DERIVED_DATA_SIZE" ]; then
-            echo "      DerivedData size: $DERIVED_DATA_SIZE"
-            echo "      💡 Try: rm -rf ~/Library/Developer/Xcode/DerivedData/Scroll*"
+        # SPM packages
+        if [ -f "Package.resolved" ] || [ -f "Scroll.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved" ]; then
+            echo "   💡 Slow packages: swift-syntax, GRDB, swift-composable-architecture"
+            echo "   💡 Try: rm -rf ~/Library/Developer/Xcode/DerivedData/*/SourcePackages"
+            echo ""
         fi
     fi
-    echo ""
 
-    # Check 3: SPM Package dependencies
-    echo "   3️⃣ Package Dependency Status:"
-    if [ -f "Package.resolved" ] || [ -f "Scroll.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved" ]; then
-        PKG_COUNT=$(find . -name "Package.resolved" -exec grep -c "\"identity\"" {} \; 2>/dev/null | tail -1)
-        echo "      SPM packages resolved: $PKG_COUNT"
-        echo "      💡 Slow packages: swift-syntax, GRDB, swift-composable-architecture"
-        echo "      💡 Try: rm -rf ~/Library/Developer/Xcode/DerivedData/*/SourcePackages"
-    fi
-    echo ""
-
-    # Check 4: Build settings that slow down compilation
-    echo "   4️⃣ Compilation Settings:"
-    echo "      Current: Debug, Onone (optimization level None)"
-    echo "      💡 Try without -Onone if using optimization checks"
-    echo "      💡 Check: ENABLE_BITCODE, ONLY_ACTIVE_ARCH, SWIFT_OPTIMIZATION_LEVEL"
-    echo ""
-
-    # Check 5: Link time analysis
-    echo "   5️⃣ Linking Issues:"
-    LINKER_WARNINGS=$(grep -c "ld:" "$BUILD_LOG" 2>/dev/null || echo 0)
-    if [ "$LINKER_WARNINGS" -gt 0 ]; then
-        echo "      Linker warnings detected: $LINKER_WARNINGS"
-        echo "      💡 Check for duplicate symbols, missing frameworks"
-    else
-        echo "      No linker warnings found (likely compilation hang, not linking)"
-    fi
-    echo ""
-
-    echo "================================================="
-    echo ""
     echo "🛠️ SUGGESTED FIXES (in order of likelihood):"
     echo ""
-    echo "1. Clean incremental state (CRITICAL - check DerivedData location first):"
+    echo "1. Clean incremental state:"
     if [ -n "$BUILD_DIR" ]; then
         echo "   rm -rf '$DERIVED_DATA_ROOT'/Scroll-*"
     else
@@ -157,48 +131,53 @@ if [ $EXIT_CODE -eq 124 ]; then
     fi
     echo "   xcodebuild clean -workspace '$WORKSPACE' -scheme '$SCHEME'"
     echo ""
-    echo "2. Check for circular module dependencies:"
-    echo "   Look for: A.swift imports B, B.swift imports A (or transitive)"
-    echo "   Use: Xcode → File → Project Settings → Build Phases → Check target dependencies"
+    echo "2. Index corruption (if size > 500MB):"
+    echo "   killall Xcode"
+    echo "   rm -rf ~/Library/Caches/com.apple.dt.Xcode"
     echo ""
-    echo "3. Check stuck module dependencies:"
-    echo "   Module '$STUCK_TARGET' likely has issue"
-    echo "   Check for: @testable imports, public type missing public conformances"
-    echo ""
-    echo "4. Swift Package Manager cache:"
-    echo "   rm -rf ~/Library/Developer/Xcode/DerivedData/*/SourcePackages"
+    echo "3. Run again with --verbose for module-level diagnostics:"
+    echo "   $0 '$WORKSPACE' '$SCHEME' $TIMEOUT --verbose"
     echo ""
 
-    rm -f "$BUILD_LOG" "$PROGRESS_LOG"
+    rm -f "$TEMP_LOG"
     exit 1
 fi
 
-# Step 4: Parse xcsift result from full output (success case)
+# Step 4: Parse xcsift output (success case - structured only)
 echo "📊 BUILD RESULT:"
 echo ""
-cat "$BUILD_LOG" | xcsift --print-warnings 2>/dev/null | jq '.' 2>/dev/null || {
-    # Fallback: check for errors in log
-    if grep -q "error:" "$BUILD_LOG"; then
+
+# Only output xcsift errors, not full build log
+XCSIFT_OUTPUT=$(cat "$TEMP_LOG" | xcsift 2>/dev/null | jq '.errors // empty' 2>/dev/null)
+
+if [ -n "$XCSIFT_OUTPUT" ]; then
+    echo "❌ BUILD FAILED"
+    echo "$XCSIFT_OUTPUT" | jq '.' 2>/dev/null || echo "$XCSIFT_OUTPUT"
+else
+    # Fallback check
+    if grep -q "error:" "$TEMP_LOG"; then
         echo "❌ BUILD FAILED (errors detected)"
     else
         echo "✅ BUILD SUCCEEDED"
     fi
-}
+fi
 echo ""
 
-# Step 5: Final verdict
+# Final verdict
 if [ $EXIT_CODE -eq 0 ]; then
     echo "================================================="
     echo "✅ COMPILATION VALID"
     echo "   - Typecheck: PASS"
     echo "   - Full workspace build: PASS"
     echo "   - Ready for production"
-    rm -f "$BUILD_LOG" "$PROGRESS_LOG"
+    rm -f "$TEMP_LOG"
     exit 0
 else
     echo "================================================="
     echo "❌ COMPILATION FAILED"
-    echo "   See BUILD RESULT above"
-    rm -f "$BUILD_LOG" "$PROGRESS_LOG"
+    if [ "$VERBOSE_MODE" != "--verbose" ]; then
+        echo "   Run with --verbose for detailed diagnostics"
+    fi
+    rm -f "$TEMP_LOG"
     exit 1
 fi
