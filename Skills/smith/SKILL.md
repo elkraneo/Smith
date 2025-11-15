@@ -257,6 +257,20 @@ Scripts/smith-format-check.sh
 - Validates @Shared constructors and anti-patterns
 - Uses Apple-native Swift Format (no external dependencies)
 
+### SPM Package Validator
+```bash
+Scripts/spm-validate.sh [package-path] [--verbose]
+```
+- **Detects circular imports** (self-imports and mutual imports)
+- Analyzes import depth (flags files with >10 imports)
+- Checks for large dependencies (swift-syntax, GRDB, TCA)
+- Three-tier exit status:
+  - Exit 1: Circular imports found (CRITICAL - must fix)
+  - Exit 0 (with warnings): Deep imports detected (refactor recommended)
+  - Exit 0: Package structure healthy
+- **Verbose mode:** `--verbose` flag shows detailed import chains
+- **Critical for:** Debugging Xcode indexing hangs, 1.8GB+ index stores, "Processing files" stuck states
+
 ### TCA Pattern Validation
 ```bash
 Scripts/tca-pattern-validator.js [file-or-directory]
