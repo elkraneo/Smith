@@ -266,34 +266,79 @@ Scripts/tca-pattern-validator.js [file-or-directory]
 - Validates @Shared usage and concurrency patterns
 - Provides specific fix recommendations with references
 
-## Smith Workflow
+## Script Execution Protocol
 
-When you ask about Swift/iOS development:
+Agents using this skill follow a **Smart Conditional** approach to script execution:
 
-1. **Auto-detect**: Claude recognizes TCA/Swift keywords
-2. **Execute validation**: Run appropriate scripts to check current state
+### Step 1: Context Detection (Mandatory)
+
+Evaluate whether code validation is applicable:
+- **Swift files in working directory?** (YES/NO)
+- **User provided code snippet?** (YES/NO)
+- **Compilation error mentioned?** (YES/NO)
+
+### Step 2: Script Execution (Conditional Mandatory)
+
+**IF any answer is YES from Step 1:**
+- Execute validation scripts (`validate-syntax.sh`, `tca-pattern-validator.js`)
+- Use script output to inform fixes
+- If scripts fail: Note the failure, proceed with pattern analysis
+- **Never bail out** due to script failures—patterns guide fixes even without script output
+
+**IF all answers are NO from Step 1:**
+- Skip scripts entirely
+- Provide pattern/knowledge guidance directly
+- No loss of capability for conceptual questions
+
+### Step 3: Analysis (Always Mandatory)
+
+**With script output:** Use objective errors + patterns for precise fixes
+**Without script output:** Use pattern knowledge + best practices for guidance
+**Either way:** Always provide actionable guidance
+
+## Smith Workflow (Agents & Scripts)
+
+When you work on Swift/iOS development:
+
+1. **Detect context**: Is there code to validate? (Step 1 above)
+2. **Execute conditionally**: If YES, run scripts; if NO, skip
 3. **Route to recipe**: 30-second classification → targeted guidance
 4. **Apply recipe**: Use provided code patterns and steps
-5. **Re-validate**: Run scripts again to verify fixes
+5. **Verify**: If scripts ran, re-validate after fixes
 6. **Complete**: Within reading budget, with production-ready code
 
-### Example Agent Workflow
+### Example: Script-Applied Workflow
 ```
-User: "My TCA reducer has compilation errors"
+Agent: "Fix my TCA reducer - it has compilation errors"
     ↓
-Smith skill activates + runs validate-syntax.sh
+Step 1 Detection: Swift files present? YES → errors mentioned? YES
     ↓
-Script: "Found 3 syntax errors in LoginFeature.swift"
+Step 2: Run validate-syntax.sh
     ↓
-Claude: Fixes syntax errors based on script output
+Script output: "3 syntax errors in LoginFeature.swift"
     ↓
-Smith skill runs tca-pattern-validator.js
+Agent: Fixes syntax based on script output
+    ↓
+Run tca-pattern-validator.js
     ↓
 Script: "Detected WithViewStore usage (deprecated)"
     ↓
-Claude: Replaces WithViewStore with @Bindable using recipe
+Agent: Replaces with @Bindable using recipe
     ↓
 All scripts pass → Task complete
+```
+
+### Example: Conceptual-Only Workflow
+```
+Agent: "What's the difference between @Shared and @SharedReader?"
+    ↓
+Step 1 Detection: Swift files? NO → code provided? NO
+    ↓
+Step 2: Scripts skipped (not applicable)
+    ↓
+Agent: Provides pattern explanation + recipes
+    ↓
+Task complete (no validation needed)
 ```
 
 ## File Structure
