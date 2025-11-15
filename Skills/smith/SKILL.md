@@ -23,6 +23,11 @@ Use this skill when:
 - ✅ User has **access control** cascade failures
 - ✅ User needs **testing patterns** for TCA features
 
+**Smith skill is available as a tool** - you can explicitly request Smith assistance:
+```
+"Use the Smith skill for this TCA pattern"
+```
+
 Example queries that should trigger this skill:
 - "How do I add optional state for a sheet in my TCA feature?"
 - "My reducer won't compile, child actions aren't being received"
@@ -257,7 +262,28 @@ Scripts/smith-format-check.sh
 - Validates @Shared constructors and anti-patterns
 - Uses Apple-native Swift Format (no external dependencies)
 
-### SPM Package Validator
+### SPM Package Analysis Tools
+
+**Context-Efficient Analyzer (JSON output):**
+```bash
+Scripts/spm-analyze.sh [package-path]
+```
+- **JSON-structured output** equivalent to xcsift for SPM analysis
+- Detects circular imports, deep imports, large dependencies
+- **87% less context** than verbose validator (~471 bytes vs 2KB)
+- Metrics: external_dependencies, internal_targets, issues, result status
+- **Output format:** Machine-readable JSON for Claude processing
+
+**Quick Validation (minimal output):**
+```bash
+Scripts/spm-quick.sh [package-path]
+```
+- **Single-line results:** ✅ PASS / ⚠️ WARNINGS / ❌ CRITICAL
+- **95% less context** than verbose validator (3 lines vs 50+ lines)
+- Exit codes for automation: 0 (pass/warning), 1 (critical)
+- Zero explanatory text - pure diagnostic output
+
+**Full Validator (detailed analysis):**
 ```bash
 Scripts/spm-validate.sh [package-path] [--verbose]
 ```
@@ -304,6 +330,44 @@ Scripts/validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds]
 
 **Agent usage:** Required when user has reported build hangs in their workspace
 
+## SPM Tool Selection Protocol
+
+**Agents choose SPM analysis tools based on context budget and analysis depth:**
+
+### Decision Matrix for SPM Analysis
+
+| Context Situation | Use Tool | Why |
+|-------------------|----------|-----|
+| **Low context budget** (< 1K tokens) | `spm-quick.sh` | Single-line output (95% savings) |
+| **Need machine-readable data** | `spm-analyze.sh` | JSON output for programmatic processing |
+| **Investigating indexing hangs** | `spm-analyze.sh` | Precise metrics for root cause analysis |
+| **User wants detailed explanation** | `spm-validate.sh` | Human-readable with explanations |
+| **User mentions "context" concerns** | `spm-quick.sh` | Maximum efficiency |
+| **Integration with other tools** | `spm-analyze.sh` | JSON can be piped to jq/other tools |
+| **First-time analysis** | `spm-quick.sh` (quick) → `spm-analyze.sh` (if issues) | Efficient triage workflow |
+
+### Default Agent Behavior
+
+```bash
+# Standard workflow for SPM packages detection:
+if [ -f "Package.swift" ]; then
+    # Step 1: Quick triage (always)
+    ./Scripts/spm-quick.sh .
+
+    # Step 2: If issues found, get structured data
+    if [ $? -ne 0 ]; then
+        ./Scripts/spm-analyze.sh .
+    fi
+
+    # Step 3: Only use verbose if user requests detailed analysis
+    if user_asked_for_detailed; then
+        ./Scripts/spm-validate.sh . --verbose
+    fi
+fi
+```
+
+**Key principle:** Start with most efficient tool, escalate only as needed.
+
 ## Script Execution Protocol
 
 Agents using this skill follow a **Smart Conditional** approach to script execution:
@@ -314,18 +378,28 @@ Evaluate whether code validation is applicable:
 - **Swift files in working directory?** (YES/NO)
 - **User provided code snippet?** (YES/NO)
 - **Compilation error mentioned?** (YES/NO)
+- **SPM package present?** (YES/NO) ← Check for Package.swift
+- **Build performance issues?** (YES/NO) ← Indexing hangs, slow builds
 
 ### Step 2: Script Execution (Conditional Mandatory)
 
 **IF any answer is YES from Step 1:**
-- Execute validation scripts **in order**:
-  1. `validate-syntax.sh` (quick syntax check)
-  2. `validate-compilation-deep.sh` (full compilation, catches hangs)
-  3. `tca-pattern-validator.js` (pattern analysis)
+
+**SPM Package Analysis (if Package.swift found):**
+1. `spm-quick.sh` (triage - 95% context savings)
+2. **IF issues found** → `spm-analyze.sh` (structured data - 87% savings)
+3. **IF detailed analysis needed** → `spm-validate.sh` (verbose - only when requested)
+
+**Traditional Swift Analysis (if no Package.swift):**
+1. `validate-syntax.sh` (quick syntax check)
+2. `validate-compilation-deep.sh` (full compilation, catches hangs)
+3. `tca-pattern-validator.js` (pattern analysis)
+
+**Critical Rules:**
+- ALWAYS start with most efficient tool (spm-quick.sh)
+- ESCALATE only when issues found
+- NEVER start with verbose tools (context conservation)
 - Use script output to inform fixes
-- If scripts fail: Note the failure, proceed with pattern analysis
-- **Never bail out** due to script failures—patterns guide fixes even without script output
-- **Critical:** If deep validation hangs → Do NOT report success until hang is resolved
 
 **IF all answers are NO from Step 1:**
 - Skip scripts entirely
@@ -349,13 +423,32 @@ When you work on Swift/iOS development:
 5. **Verify**: If scripts ran, re-validate after fixes
 6. **Complete**: Within reading budget, with production-ready code
 
-### Example: Script-Applied Workflow
+### Example: SPM Package Auto-Discovery Workflow
+```
+Agent: "Use Smith skill for Scroll performance issues"
+    ↓
+Step 1 Detection: Package.swift found? YES → performance issues? YES
+    ↓
+Step 2: Auto-run spm-quick.sh (context-efficient triage)
+    ↓
+Script: "⚠️ ReadingLibraryFeature.swift: 17 imports"
+    ↓
+Auto-escalate: Run spm-analyze.sh for structured data
+    ↓
+Script: JSON output with specific metrics
+    ↓
+Agent: Applies Smith dependency injection patterns
+    ↓
+All scripts pass → Task complete with minimal context usage
+```
+
+### Example: Traditional Swift Workflow
 ```
 Agent: "Fix my TCA reducer - it has compilation errors"
     ↓
-Step 1 Detection: Swift files present? YES → errors mentioned? YES
+Step 1 Detection: Swift files present? YES → errors mentioned? YES → Package.swift? NO
     ↓
-Step 2: Run validate-syntax.sh
+Step 2: Run traditional Swift workflow (validate-syntax.sh, etc.)
     ↓
 Script output: "3 syntax errors in LoginFeature.swift"
     ↓
