@@ -266,6 +266,19 @@ Scripts/tca-pattern-validator.js [file-or-directory]
 - Validates @Shared usage and concurrency patterns
 - Provides specific fix recommendations with references
 
+### Deep Compilation Validation
+```bash
+Scripts/validate-compilation-deep.sh [scheme] [timeout-seconds]
+```
+- **Full compilation check** (not just syntax validation)
+- Detects compilation hangs, circular dependencies, module boundary issues
+- Uses xcsift for context-efficient structured output (JSON)
+- Returns: Status + error/warning summaries (~50 char output, no noise)
+- Catches issues hidden by `swiftc -typecheck` that only appear in full build
+- Timeout detection: Identifies where compilation gets stuck
+
+**When to use:** After `validate-syntax.sh` passes, before reporting success to user
+
 ## Script Execution Protocol
 
 Agents using this skill follow a **Smart Conditional** approach to script execution:
@@ -280,10 +293,14 @@ Evaluate whether code validation is applicable:
 ### Step 2: Script Execution (Conditional Mandatory)
 
 **IF any answer is YES from Step 1:**
-- Execute validation scripts (`validate-syntax.sh`, `tca-pattern-validator.js`)
+- Execute validation scripts **in order**:
+  1. `validate-syntax.sh` (quick syntax check)
+  2. `validate-compilation-deep.sh` (full compilation, catches hangs)
+  3. `tca-pattern-validator.js` (pattern analysis)
 - Use script output to inform fixes
 - If scripts fail: Note the failure, proceed with pattern analysis
 - **Never bail out** due to script failures—patterns guide fixes even without script output
+- **Critical:** If deep validation hangs → Do NOT report success until hang is resolved
 
 **IF all answers are NO from Step 1:**
 - Skip scripts entirely
