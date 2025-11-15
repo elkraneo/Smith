@@ -23,7 +23,7 @@ fi
 
 # Step 1: Quick typecheck baseline
 echo "1️⃣ Typecheck validation..."
-TYPECHECK_ERRORS=$(swiftc -typecheck 'Sources/**/*.swift' 2>&1 | grep -c "error:" || true)
+TYPECHECK_ERRORS=$(find Sources -name "*.swift" -type f 2>/dev/null | xargs swiftc -typecheck 2>&1 | grep -c "error:" || true)
 
 if [ "$TYPECHECK_ERRORS" -gt 0 ]; then
     echo "❌ Typecheck failed with $TYPECHECK_ERRORS errors"
