@@ -6,9 +6,17 @@
 
 **spmsift** - SPM Analysis Tool (Recommended)
 - **Purpose**: xcsift-equivalent for Swift Package Manager
-- **Installation**: Install from https://github.com/your-org/spmsift
+- **Installation**: `brew install elkraneo/tap/spmsift`
 - **Usage**: Ultra-context-efficient SPM package analysis (96% savings)
 - **Integration**: Used by `Scripts/spm-spmsift-simple.sh`
+- **Repository**: https://github.com/elkraneo/spmsift
+
+**sbsift** - Swift Build Analysis Tool (Recommended)
+- **Purpose**: xcsift-equivalent for Swift Build compilation
+- **Installation**: `brew install elkraneo/tap/sbsift`
+- **Usage**: Context-efficient build analysis (43% savings)
+- **Integration**: Used by `Scripts/validate-compilation-deep.sh` (automatic detection)
+- **Repository**: https://github.com/elkraneo/sbsift
 
 ### Built-in Tools
 
@@ -32,7 +40,7 @@ The following tools are included in this skill and require no external installat
 
 | Tool | Context Usage | Output Size | Dependencies |
 |------|---------------|-------------|--------------|
-| `spm-spmsift-simple.sh` | Ultra-minimal | ~1.5KB | spmsift (external) |
+| `spm-spmsift-simple.sh` | Ultra-minimal | ~1.5KB | spmsift (Homebrew) |
 | `spm-quick.sh` | Minimal | 3 lines | Built-in |
 | `spm-analyze.sh` | Efficient | ~471B | Built-in |
 | `spm-validate.sh` | Verbose | 50+ lines | Built-in |
@@ -46,19 +54,28 @@ The following tools are included in this skill and require no external installat
 
 ### Full Setup (Recommended)
 ```bash
-# Install spmsift for ultra-efficient SPM analysis
-# Follow instructions at: https://github.com/your-org/spmsift
+# Install sbsift for build analysis (Homebrew)
+brew install elkraneo/tap/sbsift
 
-# Verify installation
+# Install spmsift for SPM analysis (Homebrew)
+brew install elkraneo/tap/spmsift
+
+# Verify installations
+sbsift --version
 spmsift --version
 ```
 
 ### Usage Priority
 
-Agents will follow this priority for SPM analysis:
+Agents will follow this priority for analysis:
 
+**SPM Analysis:**
 1. **Primary**: `spm-spmsift-simple.sh` (if spmsift available)
 2. **Fallback**: `spm-quick.sh` (built-in, always available)
 3. **Escalation**: `spm-analyze.sh` → `spm-validate.sh` (as needed)
+
+**Build Analysis:**
+1. **Primary**: `validate-compilation-deep.sh` (uses sbsift automatically if available)
+2. **Fallback**: `validate-compilation-deep.sh` (uses xcsift if sbsift unavailable)
 
 This ensures maximum context efficiency while providing fallback options for environments without spmsift.

@@ -15,7 +15,7 @@ if [ ! -f "Package.swift" ]; then
 fi
 
 if ! command -v spmsift &> /dev/null; then
-    echo '{"error":"spmsift not found"}'
+    echo '{"error":"spmsift not found. Install with: brew install elkraneo/tap/spmsift"}'
     exit 1
 fi
 
@@ -23,6 +23,7 @@ fi
 echo '{'
 echo '  "package": "'"$(basename "$PACKAGE_PATH")"'",'
 echo '  "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",'
+echo '  "tool": "spmsift",'
 echo '  "analysis": '
 
 # Use spmsift and embed its output directly

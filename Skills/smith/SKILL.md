@@ -6,38 +6,60 @@ allowed-tools: [Read, Bash, Write, Edit, Grep, Glob]
 
 # Smith Framework Skill
 
-A modern iOS development discipline for Swift Composable Architecture that prevents over-engineering and ensures production-ready code.
+A modern Swift development discipline that prevents over-engineering and ensures production-ready code through modular patterns.
+
+## Quick Start - Choose Your Approach
+
+### **Easy Mode** (Always Works)
+```
+"Use Smith skill for my code"
+```
+→ Loads all Smith patterns automatically
+
+### **Efficient Mode** (Recommended for Agents)
+```
+"Use smith-core for dependency injection"
+"Use smith-tca for reducer patterns"
+"Use smith-platforms for visionOS"
+"Use smith-core + smith-tca for TCA with dependencies"
+```
+
+## Smart Module Detection
+
+**Smith automatically detects which modules to load based on your request:**
+
+| Module | Auto-Load Keywords | Content |
+|--------|------------------|---------|
+| **smith-core** | "Swift", "dependency", "testing", "concurrency", "access control" | Universal Swift patterns |
+| **smith-tca** | "TCA", "@Reducer", "@ObservableState", "ComposableArchitecture" | Swift Composable Architecture |
+| **smith-platforms** | "iOS", "macOS", "visionOS", "RealityKit", "UIKit", "AppKit" | Platform-specific patterns |
 
 ## Usage Triggers
 
-Use this skill when:
+**Use smith-core when:**
+- ✅ User asks about **dependency injection** (@Dependency, DependencyClient)
+- ✅ User mentions **concurrency** (async/await, @MainActor, Task)
+- ✅ User needs **testing patterns** (@Test, Swift Testing)
+- ✅ User has **access control** issues (public, internal cascade)
+- ✅ User wants **general Swift** patterns and best practices
+
+**Use smith-tca when:**
 - ✅ User asks about **TCA patterns** (Swift Composable Architecture)
 - ✅ User mentions **@Reducer**, **@ObservableState**, **@Shared**
-- ✅ User has **SwiftUI navigation** challenges (.sheet, .scope, state management)
-- ✅ User encounters **compilation errors** in TCA reducers
-- ✅ User mentions **compilation errors** in Swift/TCA code
-- ✅ User asks about **dependency injection** patterns
+- ✅ User has **SwiftUI navigation** challenges (.sheet, .scope)
+- ✅ User encounters **TCA compilation errors**
 - ✅ User mentions **WithViewStore**, **ViewStore**, or **@Bindable**
+
+**Use smith-platforms when:**
 - ✅ User needs **visionOS entities** or **RealityView** patterns
-- ✅ User asks about **Smith framework**, **AGENTS documentation**
-- ✅ User has **access control** cascade failures
-- ✅ User needs **testing patterns** for TCA features
+- ✅ User mentions **iOS**, **macOS**, or platform-specific APIs
+- ✅ User asks about **UIKit**, **AppKit**, or platform frameworks
 
-**Smith skill is available as a tool** - you can explicitly request Smith assistance:
-```
-"Use the Smith skill for this TCA pattern"
-```
-
-Example queries that should trigger this skill:
-- "How do I add optional state for a sheet in my TCA feature?"
-- "My reducer won't compile, child actions aren't being received"
-- "My Swift/TCA code won't compile, what's wrong?"
-- "What's the difference between @Shared and regular state?"
-- "Should I use WithViewStore or @Bindable?"
-- "How do I handle dependencies in TCA?"
-- "Fix this TCA compilation error"
-- "How do I test my TCA reducer?"
-- "What's wrong with this Smith pattern?"
+**Examples:**
+- "How do I add dependency injection to my Swift code?" → smith-core
+- "My TCA reducer won't compile, what's wrong?" → smith-tca
+- "How do I create RealityKit entities for visionOS?" → smith-platforms
+- "Use Smith for my entire TCA app with visionOS" → smith-core + smith-tca + smith-platforms
 
 ## What This Skill Does
 
@@ -271,7 +293,7 @@ Scripts/spm-spmsift-simple.sh [package-path]
 - **Uses spmsift** (xcsift-equivalent for SPM) for maximum context efficiency
 - **96% context savings** vs raw swift package output (~1.5KB vs 40KB+)
 - Structured JSON with metrics: targets, dependencies, circular imports
-- **Dependency:** Requires `spmsift` tool (install from https://github.com/your-org/spmsift)
+- **Dependency:** Requires `spmsift` tool (install via `brew install elkraneo/tap/spmsift`)
 - **Output format:** Clean JSON analysis for Claude processing
 
 **Context-Efficient Analyzer (JSON output):**
@@ -328,8 +350,12 @@ Scripts/validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds]
   - Module analysis: Which target is stuck, what are its dependencies
   - SPM cache: Which packages are slow (swift-syntax, GRDB, TCA)
 - Timeout detection: 300s default (workspace builds are slower than single schemes)
-- **Context-efficient output:** Uses xcsift for structured JSON, not raw logs
+- **Smart tool selection:** Uses sbsift for SPM projects, xcsift for Xcode projects (automatic detection)
+- **Context-efficient output:** Uses sbsift/xcsift for structured JSON, not raw logs
 - **Sequential execution:** No parallel processes (previous context drain fixed)
+- **SPM optimization:** When `Package.swift` detected, uses `swift build` + sbsift (43% context savings)
+- **Xcode compatibility:** Falls back to `xcodebuild` + xcsift for traditional projects
+- **Tool installation:** sbsift via `brew install elkraneo/tap/sbsift`, xcsift via `brew install xcsift`
 - **Critically:** Catches hangs hidden by `swiftc -typecheck` that only manifest in full build
 - Returns: Hang point + actionable fixes + optional verbose diagnostics
 
@@ -501,21 +527,79 @@ Agent: Provides pattern explanation + recipes
 Task complete (no validation needed)
 ```
 
+## Smith Module Navigation
+
+### Available Modules
+
+**smith-core** - Universal Swift Patterns
+[📖 Read SMITH-CORE.md] - Always loaded for dependency injection, concurrency, testing, access control
+- **Content**: Dependency injection, async/await patterns, testing framework, access control
+- **When to read**: General Swift development, dependency injection, testing, concurrency
+- **Key patterns**: @DependencyClient, @MainActor, Swift Testing, access control boundaries
+
+**smith-tca** - Swift Composable Architecture
+[📖 Read SMITH-TCA.md] - Load for TCA reducers, state management, navigation
+- **Content**: @Reducer patterns, @ObservableState, @Shared, TCA navigation, testing
+- **When to read**: TCA features, SwiftUI state management, Composable Architecture
+- **Key patterns**: @Bindable store, .sheet/.scope navigation, @Shared discipline
+
+**smith-platforms** - Platform-Specific Patterns
+[📖 Read SMITH-PLATFORMS.md] - Load for iOS, macOS, visionOS development
+- **Content**: RealityKit, UIKit/AppKit integration, cross-platform patterns
+- **When to read**: Platform-specific development, visionOS AR, iOS/macOS APIs
+- **Key patterns**: RealityView vs ARView, platform abstractions, conditional compilation
+
+### How to Use Modules
+
+**Smart Agent Approach:**
+1. **Identify keywords** in user request
+2. **Load relevant modules** based on keyword detection
+3. **Start with smith-core** for universal patterns
+4. **Add specialized modules** as needed
+
+**Example Workflow:**
+```
+User: "Fix my TCA reducer with dependency injection for visionOS"
+
+Agent detection:
+- "TCA reducer" → load smith-tca
+- "dependency injection" → load smith-core
+- "visionOS" → load smith-platforms
+
+Reading order:
+1. SMITH-CORE.md (dependency injection patterns)
+2. SMITH-TCA.md (reducer patterns)
+3. SMITH-PLATFORMS.md (visionOS considerations)
+```
+
+### Context Efficiency Benefits
+
+**Modular Loading:**
+- **smith-core only**: ~3KB vs 20KB monolithic
+- **smith-core + smith-tca**: ~8KB vs 20KB monolithic
+- **All modules**: ~12KB vs 20KB monolithic
+
+**Smart Loading Saves:**
+- **40-60% context** reduction for focused tasks
+- **Faster pattern matching** with less noise
+- **Better relevance** - only read applicable patterns
+
 ## File Structure
 
 ```
 smith/
-├── SKILL.md                  (This file)
-├── embedded/                 (Core Smith documentation)
-│   ├── AGENTS-AGNOSTIC.md
-│   ├── AGENTS-TCA-PATTERNS.md
-│   ├── AGENTS-DECISION-TREES.md
-│   ├── CLAUDE.md
-│   ├── DISCOVERY-*.md
-│   └── PLATFORM-*.md
-└── references/
-    ├── MANIFEST.md           (Complete content inventory)
-    └── reading-guide.md      (Documentation routing logic)
+├── SKILL.md                  (This file - main navigation)
+├── embedded/                 (Modular documentation)
+│   ├── SMITH-CORE.md         (Universal Swift patterns)
+│   ├── SMITH-TCA.md          (TCA patterns)
+│   ├── SMITH-PLATFORMS.md    (Platform patterns)
+│   ├── AGENTS-*.md           (Legacy docs - kept for reference)
+│   └── CLAUDE.md             (Direct agent instructions)
+├── Scripts/                  (Analysis tools)
+│   ├── spm-*.sh              (SPM analysis tools)
+│   ├── validate-*.sh         (Compilation tools)
+│   └── tca-pattern-validator.js (TCA validation)
+└── README.md                 (Dependencies and installation)
 ```
 
 ## Cost

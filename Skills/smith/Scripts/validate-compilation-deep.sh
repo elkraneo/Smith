@@ -20,8 +20,29 @@ fi
 echo ""
 
 # Check dependencies
-if ! command -v xcsift &> /dev/null; then
-    echo "❌ xcsift not found. Install with: brew install xcsift"
+BUILDER_AVAILABLE=false
+BUILD_TOOL=""
+BUILD_TOOL_NAME=""
+
+if command -v sbsift &> /dev/null; then
+    BUILD_TOOL="sbsift"
+    BUILD_TOOL_NAME="sbsift"
+    BUILDER_AVAILABLE=true
+    echo "🔧 Using build analysis tool: sbsift"
+elif command -v xcsift &> /dev/null; then
+    BUILD_TOOL="xcsift"
+    BUILD_TOOL_NAME="xcsift"
+    BUILDER_AVAILABLE=true
+    echo "🔧 Using build analysis tool: xcsift"
+fi
+
+if [ "$BUILDER_AVAILABLE" = false ]; then
+    echo "❌ No build analysis tool found. Install one of:"
+    echo "   sbsift: brew install elkraneo/tap/sbsift"
+    echo "   xcsift: brew install xcsift"
+    echo ""
+    echo "📖 For sbsift: https://github.com/elkraneo/sbsift"
+    echo "📖 For xcsift: https://github.com/ldomaradzki/xcsift"
     exit 1
 fi
 
@@ -69,18 +90,41 @@ else
 fi
 echo ""
 
-# Step 2: Full build with xcsift output (structured, minimal context)
+# Step 2: Full build with sbsift/xcsift output (structured, minimal context)
 echo "3️⃣ Full build validation (${TIMEOUT}s timeout)..."
 echo ""
 
 TEMP_LOG="/tmp/smith-build-$$.log"
-timeout "$TIMEOUT" xcodebuild build \
-    -workspace "$WORKSPACE" \
-    -scheme "$SCHEME" \
-    -configuration Debug \
-    -Onone \
-    -derivedDataPath "/tmp/smith-build-$$" \
-    2>&1 > "$TEMP_LOG"
+if [ "$BUILD_TOOL" = "sbsift" ]; then
+    # For SPM projects, use swift build with sbsift
+    if [ -f "Package.swift" ]; then
+        echo "🏗️ Building SPM package with sbsift analysis..."
+        timeout "$TIMEOUT" swift build \
+            -c debug \
+            --enable-code-coverage OFF \
+            2>&1 | sbsift > "$TEMP_LOG"
+    else
+        # Fallback to xcodebuild for Xcode projects
+        echo "🏗️ Building Xcode project with sbsift analysis..."
+        timeout "$TIMEOUT" xcodebuild build \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -Onone \
+            -derivedDataPath "/tmp/smith-build-$$" \
+            2>&1 | sbsift > "$TEMP_LOG"
+    fi
+else
+    # Use xcsift for Xcode projects
+    echo "🏗️ Building Xcode project with xcsift analysis..."
+    timeout "$TIMEOUT" xcodebuild build \
+        -workspace "$WORKSPACE" \
+        -scheme "$SCHEME" \
+        -configuration Debug \
+        -Onone \
+        -derivedDataPath "/tmp/smith-build-$$" \
+        2>&1 | "$BUILD_TOOL" > "$TEMP_LOG"
+fi
 
 EXIT_CODE=$?
 
@@ -154,11 +198,27 @@ if [ -n "$XCSIFT_OUTPUT" ]; then
     echo "❌ BUILD FAILED"
     echo "$XCSIFT_OUTPUT" | jq '.' 2>/dev/null || echo "$XCSIFT_OUTPUT"
 else
-    # Fallback check
-    if grep -q "error:" "$TEMP_LOG"; then
-        echo "❌ BUILD FAILED (errors detected)"
+    # Build result analysis based on tool used
+    if [ "$BUILD_TOOL" = "sbsift" ]; then
+        # sbsift provides JSON success/failure
+        BUILD_SUCCESS=$(cat "$TEMP_LOG" | jq -r '.success // false' 2>/dev/null)
+        if [ "$BUILD_SUCCESS" = "true" ]; then
+            echo "✅ BUILD SUCCEEDED"
+        else
+            echo "❌ BUILD FAILED"
+            # Show errors from sbsift output
+            BUILD_ERRORS=$(cat "$TEMP_LOG" | jq '.errors // []' 2>/dev/null)
+            if [ -n "$BUILD_ERRORS" ] && [ "$BUILD_ERRORS" != "[]" ]; then
+                echo "$BUILD_ERRORS"
+            fi
+        fi
     else
-        echo "✅ BUILD SUCCEEDED"
+        # Fallback check for xcsift
+        if grep -q "error:" "$TEMP_LOG"; then
+            echo "❌ BUILD FAILED (errors detected)"
+        else
+            echo "✅ BUILD SUCCEEDED"
+        fi
     fi
 fi
 echo ""
