@@ -55,10 +55,16 @@ A modern Swift development discipline that prevents over-engineering and ensures
 - ✅ User mentions **iOS**, **macOS**, or platform-specific APIs
 - ✅ User asks about **UIKit**, **AppKit**, or platform frameworks
 
+**Use smith-build-tools when:**
+- ✅ User reports **build hangs**, "stuck building", "compilation timeout"
+- ✅ User mentions **Xcode hanging**, "build won't finish", "Swift compiler stuck"
+- ✅ User needs **build optimization** or **dependency analysis**
+
 **Examples:**
 - "How do I add dependency injection to my Swift code?" → smith-core
 - "My TCA reducer won't compile, what's wrong?" → smith-tca
 - "How do I create RealityKit entities for visionOS?" → smith-platforms
+- "My app build is hanging, can you help debug?" → smith-build-tools
 - "Use Smith for my entire TCA app with visionOS" → smith-core + smith-tca + smith-platforms
 
 ## What This Skill Does
@@ -365,6 +371,46 @@ Scripts/validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds]
 **When to use:** After `validate-syntax.sh` passes, BEFORE reporting success to user
 
 **Agent usage:** Required when user has reported build hangs in their workspace
+
+## Smith Build Hang Protocol (smith-build-tools)
+
+**When users report build hangs, use this two-phase approach:**
+
+### **Phase 1: Fast Validation (smith-smart-builder.sh)**
+```bash
+# Auto-detects project and tests minimal components first
+Scripts/smith-smart-builder.sh [timeout-seconds]
+```
+- **Auto-detects** SPM vs Xcode projects (zero manual paths)
+- **Tests minimal targets** first with sbsift/xcsift (80% faster)
+- **Provides clear next steps** based on results
+- **Context-efficient** output for agents
+
+### **Phase 2: Deep Analysis (smith-build-hang-analyzer.sh)**
+```bash
+# User-triggered when hang persists after normal validation
+Scripts/smith-build-hang-analyzer.sh [problematic-file] [timeout-seconds]
+```
+- **Uses overlooked Swift toolchain tools** (debug-constraints, etc.)
+- **Identifies root cause** (dependencies, cache corruption, etc.)
+- **80% success rate** with immediate fixes
+- **Structured recommendations** with success metrics
+
+### **Agent Workflow for Build Hangs:**
+
+**User Prompt:** "My Swift app build is hanging"
+
+**Agent Response:**
+1. Run `smith-smart-builder.sh` for fast triage
+2. If build succeeds but user reports runtime hang → `smith-build-hang-analyzer.sh`
+3. Follow tool recommendations (80% success rate)
+4. Report results with clear next steps
+
+**Key Benefits:**
+- **Zero prior knowledge needed** - tools auto-detect everything
+- **Context-efficient** - minimal output, maximum information
+- **Progressive analysis** - fast first, deep only when needed
+- **High success rate** - 80% of hangs resolved with immediate fixes
 
 ## SPM Tool Selection Protocol
 

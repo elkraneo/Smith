@@ -2,18 +2,41 @@
 
 # Deep Compilation Validation - Context-Efficient Version
 # Detects hangs with root cause analysis
-# Usage: ./validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds] [--verbose]
+# Usage: ./validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds] [--verbose] [--platform PLATFORM]
 
 WORKSPACE="${1:-.}"
 SCHEME="${2:-Scroll}"
 TIMEOUT="${3:-300}"
-VERBOSE_MODE="${4:-}"
+VERBOSE_MODE=""
+PLATFORM_SPECIFIED=""
+
+# Parse arguments
+shift 3
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --verbose)
+            VERBOSE_MODE="--verbose"
+            shift
+            ;;
+        --platform)
+            PLATFORM_SPECIFIED="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown argument: $1"
+            exit 1
+            ;;
+    esac
+done
 
 echo "🔍 Deep Compilation Validation (Context-Efficient)"
 echo "=================================================="
 echo "Workspace: $WORKSPACE"
 echo "Scheme: $SCHEME"
 echo "Timeout: ${TIMEOUT}s"
+if [ -n "$PLATFORM_SPECIFIED" ]; then
+    echo "Platform: $PLATFORM_SPECIFIED (forced validation)"
+fi
 if [ "$VERBOSE_MODE" = "--verbose" ]; then
     echo "Mode: VERBOSE (detailed diagnostics enabled)"
 fi
@@ -99,30 +122,74 @@ if [ "$BUILD_TOOL" = "sbsift" ]; then
     # For SPM projects, use swift build with sbsift
     if [ -f "Package.swift" ]; then
         echo "🏗️ Building SPM package with sbsift analysis..."
-        timeout "$TIMEOUT" swift build \
-            -c debug \
-            --enable-code-coverage OFF \
-            2>&1 | sbsift > "$TEMP_LOG"
+        if [ -n "$PLATFORM_SPECIFIED" ]; then
+            echo "🔍 Testing platform-specific dependencies for $PLATFORM_SPECIFIED..."
+            timeout "$TIMEOUT" swift build \
+                -c debug \
+                --enable-code-coverage OFF \
+                -Xswiftc -target \
+                -Xswiftc "${PLATFORM_SPECIFIED}-apple" \
+                2>&1 | sbsift > "$TEMP_LOG"
+        else
+            timeout "$TIMEOUT" swift build \
+                -c debug \
+                --enable-code-coverage OFF \
+                2>&1 | sbsift > "$TEMP_LOG"
+        fi
     else
         # Fallback to xcodebuild for Xcode projects
         echo "🏗️ Building Xcode project with sbsift analysis..."
+        BUILD_DEST=""
+        if [ -n "$PLATFORM_SPECIFIED" ]; then
+            case "$PLATFORM_SPECIFIED" in
+                "visionOS")
+                    BUILD_DEST="-destination 'platform=visionOS Simulator,name=Apple Vision Pro'"
+                    ;;
+                "iOS")
+                    BUILD_DEST="-destination 'platform=iOS Simulator,name=iPhone 15 Pro'"
+                    ;;
+                "macOS")
+                    BUILD_DEST="-destination 'platform=macOS'"
+                    ;;
+            esac
+            echo "🔍 Testing platform-specific build for $PLATFORM_SPECIFIED..."
+        fi
+
         timeout "$TIMEOUT" xcodebuild build \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
             -configuration Debug \
             -Onone \
             -derivedDataPath "/tmp/smith-build-$$" \
+            $BUILD_DEST \
             2>&1 | sbsift > "$TEMP_LOG"
     fi
 else
     # Use xcsift for Xcode projects
     echo "🏗️ Building Xcode project with xcsift analysis..."
+    BUILD_DEST=""
+    if [ -n "$PLATFORM_SPECIFIED" ]; then
+        case "$PLATFORM_SPECIFIED" in
+            "visionOS")
+                BUILD_DEST="-destination 'platform=visionOS Simulator,name=Apple Vision Pro'"
+                ;;
+            "iOS")
+                BUILD_DEST="-destination 'platform=iOS Simulator,name=iPhone 15 Pro'"
+                ;;
+            "macOS")
+                BUILD_DEST="-destination 'platform=macOS'"
+                ;;
+        esac
+        echo "🔍 Testing platform-specific build for $PLATFORM_SPECIFIED..."
+    fi
+
     timeout "$TIMEOUT" xcodebuild build \
         -workspace "$WORKSPACE" \
         -scheme "$SCHEME" \
         -configuration Debug \
         -Onone \
         -derivedDataPath "/tmp/smith-build-$$" \
+        $BUILD_DEST \
         2>&1 | "$BUILD_TOOL" > "$TEMP_LOG"
 fi
 
@@ -223,8 +290,33 @@ else
 fi
 echo ""
 
-# Final verdict
-if [ $EXIT_CODE -eq 0 ]; then
+# CRITICAL: Verify actual build success, not filtered output
+echo "4️⃣ Verifying actual build success..."
+ACTUAL_BUILD_SUCCESS=false
+
+# Check if we have sbsift/xcsift structured output
+if [ -f "$TEMP_LOG" ] && [ -s "$TEMP_LOG" ]; then
+    if [ "$BUILD_TOOL" = "sbsift" ]; then
+        # sbsift provides JSON with success field
+        BUILD_SUCCESS_JSON=$(cat "$TEMP_LOG" | jq -r '.success // false' 2>/dev/null)
+        if [ "$BUILD_SUCCESS_JSON" = "true" ]; then
+            ACTUAL_BUILD_SUCCESS=true
+        fi
+    else
+        # xcsift - check for errors in structured output
+        if grep -q '"status" : "failed"' "$TEMP_LOG" 2>/dev/null; then
+            ACTUAL_BUILD_SUCCESS=false
+        elif grep -q '"status" : "passed"' "$TEMP_LOG" 2>/dev/null; then
+            ACTUAL_BUILD_SUCCESS=true
+        # Fallback: check raw exit code if structured parsing fails
+        elif [ $EXIT_CODE -eq 0 ] && ! grep -q "error:" "$TEMP_LOG"; then
+            ACTUAL_BUILD_SUCCESS=true
+        fi
+    fi
+fi
+
+# Final verdict - based on actual build status, not just exit code
+if [ "$ACTUAL_BUILD_SUCCESS" = "true" ] && [ $EXIT_CODE -eq 0 ]; then
     echo "================================================="
     echo "✅ COMPILATION VALID"
     echo "   - Typecheck: PASS"
@@ -235,8 +327,15 @@ if [ $EXIT_CODE -eq 0 ]; then
 else
     echo "================================================="
     echo "❌ COMPILATION FAILED"
+    echo "   - Actual build: FAILED"
+    echo "   - Exit code: $EXIT_CODE"
     if [ "$VERBOSE_MODE" != "--verbose" ]; then
         echo "   Run with --verbose for detailed diagnostics"
+    fi
+    echo ""
+    echo "🔍 Filtered build analysis:"
+    if [ -f "$TEMP_LOG" ] && [ -s "$TEMP_LOG" ]; then
+        head -10 "$TEMP_LOG"
     fi
     rm -f "$TEMP_LOG"
     exit 1
