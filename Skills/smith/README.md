@@ -1,85 +1,64 @@
-# Smith Framework Agent Skill
+# Smith Framework Skill - SPM Tool Dependencies
 
-**Version:** 1.1.1
-**Purpose:** Swift Composable Architecture patterns and modern iOS development framework
+## External Dependencies
 
-## Quick Overview
+### Required Tools
 
-Smith is a **discipline for correctness**, not a style guide. This skill provides agents with:
+**spmsift** - SPM Analysis Tool (Recommended)
+- **Purpose**: xcsift-equivalent for Swift Package Manager
+- **Installation**: Install from https://github.com/your-org/spmsift
+- **Usage**: Ultra-context-efficient SPM package analysis (96% savings)
+- **Integration**: Used by `Scripts/spm-spmsift-simple.sh`
 
-- **Syntax-first validation** - Fix compilation errors before patterns
-- **Reading budgets** - 80% of tasks need < 15 minutes of reading
-- **Point-Free validated TCA patterns** - No deprecated APIs
-- **Anti-pattern detection** - Stop common mistakes before they happen
-- **Apple-native approach** - Zero external dependencies
+### Built-in Tools
 
-## Core Problem Solved
+The following tools are included in this skill and require no external installation:
 
-**Before Smith:** 2-minute syntax fixes become 90-minute documentation marathons
-**After Smith:** 2-minute syntax fixes stay 2-minute fixes + appropriate pattern reading
+**Smith Analysis Scripts:**
+- `spm-quick.sh` - Minimal SPM triage (95% context savings)
+- `spm-analyze.sh` - Structured JSON analysis (87% context savings)
+- `spm-validate.sh` - Detailed SPM validation
+- `spm-spmsift-simple.sh` - spmsift-based analyzer (requires spmsift tool)
 
-## How This Skill Works
+**Compilation Scripts:**
+- `validate-syntax.sh` - Swift syntax validation
+- `validate-compilation-deep.sh` - Full workspace compilation analysis
+- `smith-format-check.sh` - Swift Format validation
 
-1. **Auto-detection**: Claude loads this skill when TCA/Swift patterns are detected
-2. **Task routing**: 30-second classification → targeted documentation path
-3. **Reading budgets**: Built-in time limits prevent over-analysis
-4. **Pattern validation**: Checklists ensure implementations follow Smith rules
-5. **Syntax-first**: Always fix compilation errors before pattern application
+**Pattern Analysis:**
+- `tca-pattern-validator.js` - TCA pattern validation (requires Node.js)
 
-## Key Documents
+### Context Efficiency Comparison
 
-- **[QUICK-START.md](QUICK-START.md)** - 5-minute survival guide
-- **[AGENTS-AGNOSTIC.md](AGENTS-AGNOSTIC.md)** - Universal Swift patterns (state, concurrency, testing)
-- **[AGENTS-TCA-PATTERNS.md](AGENTS-TCA-PATTERNS.md)** - Canonical TCA patterns with verification checklists
-- **[AGENTS-DECISION-TREES.md](AGENTS-DECISION-TREES.md)** - Architecture decision guidance
-- **[CLAUDE.md](CLAUDE.md)** - Direct instructions for Claude agents
+| Tool | Context Usage | Output Size | Dependencies |
+|------|---------------|-------------|--------------|
+| `spm-spmsift-simple.sh` | Ultra-minimal | ~1.5KB | spmsift (external) |
+| `spm-quick.sh` | Minimal | 3 lines | Built-in |
+| `spm-analyze.sh` | Efficient | ~471B | Built-in |
+| `spm-validate.sh` | Verbose | 50+ lines | Built-in |
+| `swift package dump-package` | High | 40KB+ | Swift toolchain |
 
-## Case Studies
+## Installation Requirements
 
-- **[DISCOVERY-14](DISCOVERY-14-NESTED-REDUCER-GOTCHAS.md)** - Nested @Reducer patterns (Point-Free validated)
-- **[DISCOVERY-15](DISCOVERY-15-PRINT-OSLOG-PATTERNS.md)** - Print vs OSLog logging patterns
-- **[DISCOVERY-13](DISCOVERY-13-SWIFT-COMPILER-CRASHES.md)** - Swift compiler error resolution
+### Minimum Setup
+- Swift toolchain (for built-in scripts)
+- Node.js (for TCA pattern validation)
 
-## Platform Support
+### Full Setup (Recommended)
+```bash
+# Install spmsift for ultra-efficient SPM analysis
+# Follow instructions at: https://github.com/your-org/spmsift
 
-- **[PLATFORM-VISIONOS.md](PLATFORM-VISIONOS.md)** - visionOS entities and PresentationComponent patterns
-- **[PLATFORM-IOS.md](PLATFORM-IOS.md)** - iOS-specific patterns
-- **[PLATFORM-MACOS.md](PLATFORM-MACOS.md)** - macOS development patterns
+# Verify installation
+spmsift --version
+```
 
-## Validation Scripts
+### Usage Priority
 
-- **[Scripts/validate-syntax.sh](Scripts/validate-syntax.sh)** - First line of defense: `swiftc -typecheck`
-- **[Scripts/check-tca-patterns.js](Scripts/check-tca-patterns.js)** - TCA pattern validation
-- **[Scripts/reading-router.js](Scripts/reading-router.js)** - Smart documentation routing
+Agents will follow this priority for SPM analysis:
 
-## Success Metrics
+1. **Primary**: `spm-spmsift-simple.sh` (if spmsift available)
+2. **Fallback**: `spm-quick.sh` (built-in, always available)
+3. **Escalation**: `spm-analyze.sh` → `spm-validate.sh` (as needed)
 
-Target outcomes when using Smith:
-- ✅ 90% reduction in pattern violation bugs
-- ✅ 50% faster agent task completion
-- ✅ Zero over-engineering (simple solutions first)
-- ✅ 100% Point-Free validated TCA patterns
-- ✅ Perfect compilation before pattern application
-
-## The Discipline
-
-Smith prevents:
-- ❌ Using deprecated TCA APIs (WithViewStore, old patterns)
-- ❌ Over-engineering simple tasks
-- ❌ Skipping syntax validation
-- ❌ Ignoring reading budgets
-- ❌ Race conditions with @Shared state
-- ❌ Improper concurrency patterns
-
-Smith ensures:
-- ✅ Modern TCA 1.23.0+ patterns
-- ✅ Proper dependency injection
-- ✅ Apple-native toolchain usage
-- ✅ Clear verification checklists
-- ✅ Production-ready code
-
----
-
-**Last Updated:** November 14, 2025
-**Framework Version:** 1.1.1
-**Validated Against:** Point-Free Swift Composable Architecture examples
+This ensures maximum context efficiency while providing fallback options for environments without spmsift.

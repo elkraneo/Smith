@@ -264,6 +264,16 @@ Scripts/smith-format-check.sh
 
 ### SPM Package Analysis Tools
 
+**spmsift-Based Analyzer (ultra-efficient):**
+```bash
+Scripts/spm-spmsift-simple.sh [package-path]
+```
+- **Uses spmsift** (xcsift-equivalent for SPM) for maximum context efficiency
+- **96% context savings** vs raw swift package output (~1.5KB vs 40KB+)
+- Structured JSON with metrics: targets, dependencies, circular imports
+- **Dependency:** Requires `spmsift` tool (install from https://github.com/your-org/spmsift)
+- **Output format:** Clean JSON analysis for Claude processing
+
 **Context-Efficient Analyzer (JSON output):**
 ```bash
 Scripts/spm-analyze.sh [package-path]
@@ -338,24 +348,32 @@ Scripts/validate-compilation-deep.sh [workspace-path] [scheme] [timeout-seconds]
 
 | Context Situation | Use Tool | Why |
 |-------------------|----------|-----|
+| **Ultra-low context budget** (< 500 tokens) | `spm-spmsift-simple.sh` | Maximum efficiency (96% savings) if spmsift available |
 | **Low context budget** (< 1K tokens) | `spm-quick.sh` | Single-line output (95% savings) |
-| **Need machine-readable data** | `spm-analyze.sh` | JSON output for programmatic processing |
-| **Investigating indexing hangs** | `spm-analyze.sh` | Precise metrics for root cause analysis |
+| **Need machine-readable data** | `spm-spmsift-simple.sh` or `spm-analyze.sh` | JSON output for programmatic processing |
+| **Investigating indexing hangs** | `spm-spmsift-simple.sh` | Precise metrics + circular import detection |
 | **User wants detailed explanation** | `spm-validate.sh` | Human-readable with explanations |
-| **User mentions "context" concerns** | `spm-quick.sh` | Maximum efficiency |
-| **Integration with other tools** | `spm-analyze.sh` | JSON can be piped to jq/other tools |
-| **First-time analysis** | `spm-quick.sh` (quick) → `spm-analyze.sh` (if issues) | Efficient triage workflow |
+| **User mentions "context" concerns** | `spm-spmsift-simple.sh` | Maximum efficiency (if available) |
+| **Integration with other tools** | `spm-spmsift-simple.sh` or `spm-analyze.sh` | JSON can be piped to jq/other tools |
+| **First-time analysis** | `spm-spmsift-simple.sh` → `spm-quick.sh` → `spm-analyze.sh` | Progressive triage workflow |
 
 ### Default Agent Behavior
 
 ```bash
 # Standard workflow for SPM packages detection:
 if [ -f "Package.swift" ]; then
-    # Step 1: Quick triage (always)
-    ./Scripts/spm-quick.sh .
+    # Step 1: Try spmsift for maximum efficiency (if available)
+    if command -v spmsift &> /dev/null; then
+        ./Scripts/spm-spmsift-simple.sh .
+        SPM_RESULT=$?
+    else
+        # Fallback to built-in tools
+        ./Scripts/spm-quick.sh .
+        SPM_RESULT=$?
+    fi
 
     # Step 2: If issues found, get structured data
-    if [ $? -ne 0 ]; then
+    if [ $SPM_RESULT -ne 0 ]; then
         ./Scripts/spm-analyze.sh .
     fi
 
@@ -386,9 +404,13 @@ Evaluate whether code validation is applicable:
 **IF any answer is YES from Step 1:**
 
 **SPM Package Analysis (if Package.swift found):**
-1. `spm-quick.sh` (triage - 95% context savings)
-2. **IF issues found** → `spm-analyze.sh` (structured data - 87% savings)
-3. **IF detailed analysis needed** → `spm-validate.sh` (verbose - only when requested)
+1. `spm-spmsift-simple.sh` (ultra-efficient - 96% context savings, requires spmsift)
+2. **OR spm-quick.sh** (fallback triage - 95% context savings)
+3. **IF issues found** → `spm-analyze.sh` (structured data - 87% savings)
+4. **IF detailed analysis needed** → `spm-validate.sh` (verbose - only when requested)
+5. **Reality Check (context-efficient):**
+   - `swiftc -typecheck **/*.swift` (syntax validation, minimal context)
+   - **IF claiming "compilable"** → Only then run `validate-compilation-deep.sh`
 
 **Traditional Swift Analysis (if no Package.swift):**
 1. `validate-syntax.sh` (quick syntax check)
@@ -399,6 +421,9 @@ Evaluate whether code validation is applicable:
 - ALWAYS start with most efficient tool (spm-quick.sh)
 - ESCALATE only when issues found
 - NEVER start with verbose tools (context conservation)
+- **Reality Validation**: `swiftc -typecheck` before claiming "compilable"
+- **Deep Build Only**: Run `validate-compilation-deep.sh` ONLY if user reports build issues
+- **Never Assume**: Analysis tools ≠ compilation success
 - Use script output to inform fixes
 
 **IF all answers are NO from Step 1:**
